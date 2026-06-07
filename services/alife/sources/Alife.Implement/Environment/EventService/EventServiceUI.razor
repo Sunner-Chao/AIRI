@@ -1,0 +1,129 @@
+@namespace Alife.Implement
+@inherits Alife.Framework.PluginUIBase<EventService, EventServiceData>
+@implements IDisposable
+@using Alife.Framework
+@inject IMessageService MessageService
+
+<div style="background: #fafafa; padding: 24px; border-radius: 12px; border: 1px solid #f0f0f0;">
+    <Flex Direction="FlexDirection.Vertical" Gap="@("24")">
+
+        <!-- 任务监控区域 -->
+        <div>
+            <Title Level="4" Style="margin-bottom: 16px;">时钟与定时任务监控</Title>
+            @if (Plugin != null)
+            {
+                <GridRow Gutter="16">
+                    @foreach ((DateTime Time, string Name) task in Plugin.ActiveTasks)
+                    {
+                        TimeSpan remaining = task.Time - DateTime.Now;
+                        var isFinished = remaining.TotalSeconds <= 0;
+                        var isPermanent = task.Time == DateTime.MaxValue;
+
+                        <GridCol Span="12" Style="margin-bottom: 16px;">
+                            <Card Size="CardSize.Small"
+                                  Style="border-radius: 8px; border: 1px solid #e8e8e8; background: #fff;">
+                                <Flex Justify="FlexJustify.SpaceBetween" Align="FlexAlign.Center">
+                                    <div style="flex: 1;">
+                                        <Text Strong
+                                              Style="font-size: 14px; display: block; margin-bottom: 4px;">@task.Name</Text>
+                                        @if (isPermanent)
+                                        {
+                                            <Badge Status="BadgeStatus.Default" Text="待机中"/>
+                                        }
+                                        else if (isFinished)
+                                        {
+                                            <Badge Status="BadgeStatus.Processing" Color="BadgeColor.Green"
+                                                   Text="即将触发..."/>
+                                        }
+                                        else
+                                        {
+                                            <Badge Status="BadgeStatus.Processing" Color="BadgeColor.Blue"
+                                                   Text="@FormatRemaining(remaining)"/>
+                                        }
+                                    </div>
+                                    <Icon Type="clock-circle" Theme="IconThemeType.Outline"
+                                          Style="font-size: 20px; color: #bfbfbf;"/>
+                                </Flex>
+                                <div
+                                    style="margin-top: 12px; font-size: 12px; color: #8c8c8c; border-top: 1px solid #f5f5f5; padding-top: 8px;">
+                                    设定时间: @(isPermanent ? "无" : task.Time.ToString("HH:mm:ss"))
+                                </div>
+                            </Card>
+                        </GridCol>
+                    }
+                </GridRow>
+            }
+            else
+            {
+                <Alert Type="AlertType.Info" Message="当前插件未在运行中，任务监控不可用喵！" ShowIcon="true"/>
+            }
+        </div>
+
+        <Divider Style="margin: 8px 0;"/>
+
+        <!-- 配置参数区域 -->
+        <div>
+            <Title Level="4" Style="margin-bottom: 16px;">配置参数</Title>
+            <GridRow Gutter="16">
+                <GridCol Span="12">
+                    <div style="margin-bottom: 16px;">
+                        <Text Type="TextElementType.Secondary" Style="display: block; margin-bottom: 8px;">报点基础间隔 (秒)</Text>
+                        <InputNumber @bind-Value="@Configuration.UpdateInterval" Min="1" Style="width: 100%; border-radius: 6px;"/>
+                    </div>
+                </GridCol>
+                <GridCol Span="12">
+                    <div style="margin-bottom: 16px;">
+                        <Text Type="TextElementType.Secondary" Style="display: block; margin-bottom: 8px;">基础偏移范围 (秒)</Text>
+                        <InputNumber @bind-Value="@Configuration.UpdateRandomOffset" Min="0" Style="width: 100%; border-radius: 6px;"/>
+                    </div>
+                </GridCol>
+
+                <GridCol Span="24">
+                    <div style="margin-bottom: 16px;">
+                        <Text Type="TextElementType.Secondary" Style="display: block; margin-bottom: 8px;">程序启动附加提示</Text>
+                        <TextArea @bind-Value="@Configuration.StartPrompt" Rows="2" Style="border-radius: 6px;"></TextArea>
+                    </div>
+                </GridCol>
+
+                <GridCol Span="24">
+                    <div style="margin-bottom: 16px;">
+                        <Text Type="TextElementType.Secondary" Style="display: block; margin-bottom: 8px;">自动报点附加提示</Text>
+                        <TextArea @bind-Value="@Configuration.UpdatePrompt" Rows="2" Style="border-radius: 6px;"></TextArea>
+                    </div>
+                </GridCol>
+
+                <GridCol Span="24">
+                    <div style="margin-bottom: 24px;">
+                        <Text Type="TextElementType.Secondary" Style="display: block; margin-bottom: 8px;">程序关闭附加提示</Text>
+                        <TextArea @bind-Value="@Configuration.DestroyPrompt" Rows="2" Style="border-radius: 6px;"></TextArea>
+                    </div>
+                </GridCol>
+            </GridRow>
+        </div>
+
+    </Flex>
+</div>
+
+@code {
+    System.Timers.Timer? refreshTimer;
+
+    protected override void OnInitialized()
+    {
+        refreshTimer = new System.Timers.Timer(1000);
+        refreshTimer.Elapsed += (_, _) => InvokeAsync(StateHasChanged);
+        refreshTimer.Start();
+    }
+
+    string FormatRemaining(TimeSpan ts)
+    {
+        if (ts.TotalHours >= 1) return $"{(int)ts.TotalHours}h {ts.Minutes}m {ts.Seconds}s";
+        if (ts.TotalMinutes >= 1) return $"{(int)ts.TotalMinutes}m {ts.Seconds}s";
+        return $"{(int)ts.TotalSeconds}s";
+    }
+
+    public void Dispose()
+    {
+        refreshTimer?.Stop();
+        refreshTimer?.Dispose();
+    }
+}

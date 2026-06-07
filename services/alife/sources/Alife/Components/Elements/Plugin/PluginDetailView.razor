@@ -1,0 +1,174 @@
+@using System.Reflection
+@using Newtonsoft.Json
+@inject ConfigurationSystem ConfigurationSystem
+
+<div style="display: flex; flex-direction: column; height: 100%;">
+    @* ═══ 页头：元数据（固定） ═══ *@
+    <div style="flex-shrink: 0; background: #fafafa; padding: 24px; border-radius: 8px; border: 1px solid #f0f0f0;">
+        <Flex Justify="FlexJustify.SpaceBetween" Align="FlexAlign.Start">
+            <div>
+                <Title Level="3" Style="margin: 0 0 4px 0;">@PluginAttr.Name</Title>
+                <Text Type="@TextElementType.Secondary" Copyable>@PluginType.FullName</Text>
+            </div>
+            @if (PluginAttr.LaunchOrder != 0)
+            {
+                <Tag Color="@("blue")">启动顺序: @PluginAttr.LaunchOrder</Tag>
+            }
+        </Flex>
+
+        <Paragraph Style="margin-top: 16px; color: rgba(0,0,0,0.65); white-space: pre-wrap">
+            @PluginAttr.Description
+        </Paragraph>
+
+        @if (!string.IsNullOrEmpty(PluginAttr.Url))
+        {
+            <a href="@PluginAttr.Url" target="_blank">
+                <Icon Type="link"/>
+                项目文档</a>
+        }
+    </div>
+
+    @* ═══ 中部：自定义 UI（可滚动） ═══ *@
+    <div style="flex: 1; overflow-y: auto; padding: 16px 0;">
+        @if (PluginAttr.EditorUI != null && typeof(IComponent).IsAssignableFrom(PluginAttr.EditorUI))
+        {
+            <DynamicComponent Type="PluginAttr.EditorUI" Parameters="@(GetParameters())"/>
+        }
+        else
+        {
+            @(DefaultUI)
+        }
+    </div>
+
+    @* ═══ 页尾：配置保存（固定） ═══ *@
+    @if (isConfigurable)
+    {
+        <div style="flex-shrink: 0; padding: 16px 0; border-top: 1px solid #f0f0f0;">
+            <ConfigSaveUI PluginType="@PluginType"
+                          Configuration="@configuration"
+                          CharacterName="@Character?.Name"
+                          OnConfigurationChanged="@OnConfigSaved"/>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public Type PluginType { get; set; } = null!;
+    [Parameter] public ChatActivity? ChatActivity { get; set; }
+    [Parameter] public Character? Character { get; set; }
+
+    PluginAttribute PluginAttr => PluginType.GetCustomAttribute<PluginAttribute>()!;
+    Plugin? Plugin { get; set; }
+    object? configuration;
+    bool isConfigurable;
+
+    string jsonConfig = "{}";
+    bool isInputted = false;
+
+    RenderFragment DefaultUI => __builder =>
+    {
+        if (isConfigurable)
+        {
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+                <!-- 新增相对定位容器 -->
+                <div style="position: relative;">
+                    <TextArea AutoSize="true"
+                              MinRows="10"
+                              Style="font-family: monospace; padding-right: 32px;"
+                              @bind-Value="jsonConfig"
+                              OnInput="@(() => isInputted = true)">
+                    </TextArea>
+
+                    <Button Type="@ButtonType.Primary"
+                            Icon="@IconType.Outline.Check"
+                            OnClick="@(() =>
+                                     {
+                                         OnConfigSaved(GetConfigFromText());
+                                         isInputted = false;
+                                     })"
+                            Disabled="@(!isInputted)"
+                            Style="position: absolute; top: 8px; right: 8px; z-index: 1;">
+                    </Button>
+                </div>
+            </div>
+        }
+    };
+
+    protected override void OnParametersSet()
+    {
+        Plugin = ChatActivity?.PluginService.GetService(PluginType) as Plugin;
+        isConfigurable = ConfigurationSystem.CanConfiguration(PluginType);
+        LoadConfiguration();
+    }
+
+    void LoadConfiguration()
+    {
+        if (isConfigurable == false) return;
+
+        // 从 ConfigurationSystem 加载并深拷贝，避免编辑直接影响运行时
+        object? raw = ConfigurationSystem.GetConfiguration(PluginType, Character?.StorageKey ?? "");
+        if (raw != null)
+        {
+            string json = JsonConvert.SerializeObject(raw);
+            configuration = JsonConvert.DeserializeObject(json, raw.GetType());
+            jsonConfig = JsonConvert.SerializeObject(configuration, Formatting.Indented);
+        }
+        else
+        {
+            Type? configType = ConfigurationSystem.GetConfigurationType(PluginType);
+            if (configType != null)
+                configuration = Activator.CreateInstance(configType);
+            jsonConfig = JsonConvert.SerializeObject(configuration, Formatting.Indented);
+        }
+    }
+
+    void OnConfigSaved(object? newConfig)
+    {
+        configuration = newConfig ?? configuration;
+        jsonConfig = JsonConvert.SerializeObject(configuration, Formatting.Indented);
+
+        // 运行时自动回写到 Plugin
+        if (Plugin != null)
+        {
+            PropertyInfo? prop = Plugin.GetType().GetProperty("Configuration");
+            if (prop != null && prop.CanWrite)
+                prop.SetValue(Plugin, newConfig);
+        }
+
+        StateHasChanged();
+    }
+
+    object? GetConfigFromText()
+    {
+        if (isConfigurable == false) return null;
+        try
+        {
+            Type type = ConfigurationSystem.GetConfigurationType(PluginType)!;
+            return JsonConvert.DeserializeObject(jsonConfig, type)
+                   ?? Activator.CreateInstance(type);
+        }
+        catch
+        {
+            return configuration;
+        }
+    }
+
+    Dictionary<string, object?> GetParameters()
+    {
+        // DefaultUI 中的 JSON 文本修改后同步到 configuration
+        if (isConfigurable && PluginAttr.EditorUI == null)
+        {
+            configuration = GetConfigFromText();
+        }
+
+        return new Dictionary<string, object?>
+        {
+            { "Character", Character },
+            { "ChatActivity", ChatActivity },
+            { "Plugin", Plugin },
+            { "Configuration", configuration! },
+            { "DefaultUI", DefaultUI },
+        };
+    }
+
+}

@@ -1,0 +1,111 @@
+:root {
+    --sidebar-bg: #001529;
+    --content-bg: #f5f5f5;
+    --mac-radius: 8px;
+}
+
+body {
+    background-image: url('images/wallpaper.png');
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    margin: 0;
+    padding: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+/* 布局外壳：半透明毛玻璃效果仅用于整体氛围 */
+.app-container {
+    height: 100vh;
+    width: 100vw;
+    display: flex;
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+    background: rgba(0, 0, 0, 0.4);
+}
+
+/* 三栏布局核心样式 */
+.global-sidebar {
+    background: #001529 !important;
+    border-right: 1px solid rgba(255,255,255,0.1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.secondary-sidebar {
+    background: #ffffff !important;
+    border-right: 1px solid #f0f0f0;
+    width: 240px;
+    display: flex;
+    flex-direction: column;
+}
+
+.main-content {
+    flex: 1;
+    background: #f0f2f5;
+    overflow: hidden;
+    position: relative;
+}
+
+/* 导航项 */
+.nav-item-icon {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    color: rgba(255,255,255,0.65);
+    margin-bottom: 12px;
+    transition: all 0.3s;
+}
+
+.nav-item-icon:hover, .nav-item-icon.active {
+    background: #1890ff;
+    color: #fff;
+}
+
+/* 状态圆点 */
+.status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    border: 2px solid #fff;
+}
+
+.status-online {
+    background-color: #52c41a;
+}
+
+/* 覆盖 AntDesign 使其更紧凑 */
+.ant-layout-sider {
+    background: #001529 !important;
+}
+
+.ant-menu-inline, .ant-menu-vertical {
+    border-inline-end: none !important;
+}
+
+/* 聊天气泡简版样式 */
+.chat-bubble {
+    padding: 12px 16px;
+    border-radius: 12px;
+    margin: 8px 0;
+    max-width: 85%;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.chat-bubble-user {
+    background: #95ec69; /* 微信绿 */
+    color: #000;
+}
+
+.chat-bubble-ai {
+    background: #fff;
+    color: #000;
+}

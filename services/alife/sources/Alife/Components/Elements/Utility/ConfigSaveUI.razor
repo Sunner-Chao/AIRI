@@ -1,0 +1,111 @@
+@namespace Alife.Components
+@using Alife.Framework
+@using System.IO
+@inject ConfigurationSystem ConfigurationSystem
+@inject IMessageService MessageService
+
+<div>
+    <Flex Justify="FlexJustify.End" Align="FlexAlign.Center">
+        <Space>
+            <SpaceItem>
+                <Popconfirm Title="确认保存到全局吗？所有未单独配置的角色将默认使用此配置。" OnConfirm="SaveToGlobal">
+                    <Button Type="@ButtonType.Primary" Icon="@IconType.Outline.Global">应用到全局</Button>
+                </Popconfirm>
+            </SpaceItem>
+            @if (!string.IsNullOrEmpty(CharacterName))
+            {
+                <SpaceItem>
+                    <Button Icon="@IconType.Outline.User" OnClick="SaveToCharacter">应用到角色</Button>
+                </SpaceItem>
+                <SpaceItem>
+                    <Popconfirm Title="确认删除角色独立配置吗？删除后将回退至全局配置。"
+                                OnConfirm="DeleteCharacterConfig"
+                                Disabled="@(!hasCharacterConfig)">
+                        <Button Danger Icon="@IconType.Outline.Delete" Disabled="@(!hasCharacterConfig)">取消角色配置
+                        </Button>
+                    </Popconfirm>
+                </SpaceItem>
+            }
+        </Space>
+    </Flex>
+</div>
+
+@code {
+
+    /// <summary>
+    /// 插件类型
+    /// </summary>
+    [Parameter]
+    public Type? PluginType { get; set; }
+
+    /// <summary>
+    /// 当前正在编辑的配置实例
+    /// </summary>
+    [Parameter]
+    public object? Configuration { get; set; }
+
+    /// <summary>
+    /// 当前角色名称（为空则不显示角色相关选项）
+    /// </summary>
+    [Parameter]
+    public string? CharacterName { get; set; }
+
+    /// <summary>
+    /// 当配置被删除并回退到全局时触发，参数为新的配置对象
+    /// </summary>
+    [Parameter]
+    public EventCallback<object> OnConfigurationChanged { get; set; }
+
+    bool hasCharacterConfig;
+
+    protected override void OnParametersSet()
+    {
+        UpdateStatus();
+    }
+
+    void UpdateStatus()
+    {
+        if (PluginType != null && !string.IsNullOrEmpty(CharacterName))
+        {
+            hasCharacterConfig = ConfigurationSystem.HasConfiguration(PluginType, Path.Combine("Character", CharacterName));
+        }
+        else
+        {
+            hasCharacterConfig = false;
+        }
+    }
+
+    void SaveToGlobal()
+    {
+        if (PluginType == null || Configuration == null) return;
+        ConfigurationSystem.SetConfiguration(PluginType, Configuration);
+        MessageService.Success("全局配置保存成功喵！");
+        OnConfigurationChanged.InvokeAsync(Configuration);
+    }
+
+    void SaveToCharacter()
+    {
+        if (PluginType == null || Configuration == null || string.IsNullOrEmpty(CharacterName)) return;
+        ConfigurationSystem.SetConfiguration(PluginType, Configuration, Path.Combine("Character", CharacterName));
+        UpdateStatus();
+        MessageService.Success($"角色 [{CharacterName}] 的独立配置保存成功喵！");
+        OnConfigurationChanged.InvokeAsync(Configuration);
+    }
+
+    async Task DeleteCharacterConfig()
+    {
+        if (PluginType == null || string.IsNullOrEmpty(CharacterName)) return;
+        ConfigurationSystem.DeleteConfiguration(PluginType, Path.Combine("Character", CharacterName));
+        UpdateStatus();
+
+        // 重新获取全局配置并通知刷新
+        var globalConfig = ConfigurationSystem.GetConfiguration(PluginType);
+        if (globalConfig != null)
+        {
+            await OnConfigurationChanged.InvokeAsync(globalConfig);
+        }
+
+        MessageService.Success($"角色 [{CharacterName}] 的独立配置已删除，已回退至全局配置喵！");
+    }
+
+}

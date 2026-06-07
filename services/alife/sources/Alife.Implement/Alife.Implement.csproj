@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+  <PropertyGroup>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>Alife.Implement</AssemblyName>
+    <RootNamespace>Alife.Implement</RootNamespace>
+    <UseWindowsForms>true</UseWindowsForms>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Alife.Basic\Alife.Basic.csproj" />
+    <ProjectReference Include="..\Alife.Framework\Alife.Framework.csproj" />
+    <ProjectReference Include="..\Alife.Function\Alife.Function.Speech\Alife.Function.Speech.csproj" />
+    <ProjectReference Include="..\Alife.Function\Alife.Function.QChat\Alife.Function.QChat.csproj" />
+    <ProjectReference Include="..\Alife.Function\Alife.Function.Vision\Alife.Function.Vision.csproj" />
+    <ProjectReference Include="..\Alife.Function\Alife.Function.Memory\Alife.Function.Memory.csproj" />
+    <ProjectReference Include="..\Alife.Function\Alife.Function.Browser\Alife.Function.Browser.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Alife.Function\Alife.Function.DeskPet\PetModelMetadata.cs">
+      <Link>Express\DeskPetService\PetModelMetadata.cs</Link>
+    </Compile>
+    <Compile Include="..\Alife.Function\Alife.Function.DeskPet\PetServer.cs">
+      <Link>Express\DeskPetService\PetServer.cs</Link>
+    </Compile>
+    <Compile Include="..\Alife.Function\Alife.Function.DeskPet\PetProcess.cs">
+      <Link>Express\DeskPetService\PetProcess.cs</Link>
+    </Compile>
+  </ItemGroup>
+</Project>
+
+

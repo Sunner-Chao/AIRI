@@ -1,0 +1,157 @@
+@page "/agent/{name}"
+@using Alife.Components.Elements.Character
+@using Alife.Components.Elements.Plugin
+@inject CharacterSystem CharacterSystem
+@inject INotificationService NotificationService
+
+
+@if (character == null)
+{
+    <div style="padding: 50px; text-align: center; color: #fff;">
+        <Icon Type="loading" Style="font-size: 32px"/>
+        <p>正在寻找角色喵...</p>
+    </div>
+}
+else
+{
+    <div
+        style="height: calc(100vh - 24px); margin: 12px; display: flex; overflow: hidden; background: #fff; border-radius: 8px; border: 1px solid #f0f0f0;">
+
+        <!-- 角色侧边二级导航 -->
+        <div
+            style="width: 220px; border-right: 1px solid #f0f0f0; display: flex; flex-direction: column; background: #fafafa;">
+
+            @* 角色头像状态 *@
+            <div style="padding: 24px; text-align: center; border-bottom: 1px solid #f0f0f0">
+                <Avatar Size="@AvatarSize.Large"
+                        Style="background: #1890ff; width: 64px; height: 64px; line-height: 64px; font-size: 24px;">
+                    @(character.Name.FirstOrDefault())
+                </Avatar>
+                <Title Level="4" Style="margin-top: 12px; margin-bottom: 0;">@character.Name</Title>
+                @if (characterHomeUI != null)
+                {
+                    <div
+                        style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 8px;">
+                        <span class="status-dot @(characterHomeUI.Activity != null ? "status-online" : "")"></span>
+                        <Text Type="@TextElementType.Secondary"
+                              Style="font-size: 12px">@(characterHomeUI.Activity != null ? "正在运行" : "待机中")</Text>
+                    </div>
+                }
+            </div>
+
+            @* 功能菜单 *@
+            <div style="flex: 1; padding: 12px 0; overflow-y: auto; overflow-x: hidden;">
+                <Menu Mode="@MenuMode.Inline" SelectedKeys="@(new[] { activeTab })"
+                      Style="background: transparent;">
+                    <MenuItem Key="info" OnClick="@(() => activeTab = "info")">
+                        <Icon Type="@IconType.Outline.Dashboard"/>
+                        <span>角色设定</span>
+                    </MenuItem>
+                    <MenuItem Key="chat" OnClick="@(() => activeTab = "chat")">
+                        <Icon Type="@IconType.Outline.Comment"/>
+                        <span>对话看板</span>
+                    </MenuItem>
+                    <MenuItem Key="history" OnClick="@(() => activeTab = "history")">
+                        <Icon Type="@IconType.Outline.Book"/>
+                        <span>完整背景</span>
+                    </MenuItem>
+                    <MenuItem Key="plugins" OnClick="@(() => activeTab = "plugins")">
+                        <Icon Type="@IconType.Outline.Build"/>
+                        <span>插件细节</span>
+                    </MenuItem>
+                </Menu>
+            </div>
+
+            @* 常用功能快捷访问 *@
+            <div style="padding: 16px; border-top: 1px solid #f0f0f0">
+                <Button Block Style="margin-bottom: 12px;" Icon="@IconType.Outline.FolderOpen"
+                        OnClick="@(OpenStorageDirectory)">打开存储目录
+                </Button>
+
+                @if (characterHomeUI != null)
+                {
+                    @if (characterHomeUI.Activity == null)
+                    {
+                        <Button Type="@ButtonType.Primary" Block Loading="@characterHomeUI.IsLoading"
+                                OnClick="@(characterHomeUI.StartActivity)">
+                            激活角色
+                        </Button>
+                    }
+                    else
+                    {
+                        <Button Danger Block OnClick="@(characterHomeUI.StopActivity)">停止运行</Button>
+                    }
+                }
+            </div>
+        </div>
+
+        <!-- 角色工作区内容 -->
+        <div @key="@Name" style="flex: 1; display: flex; flex-direction: column; overflow: hidden; background: #fff">
+            @if (character != null)
+            {
+                <CharacterHomeUI @ref="characterHomeUI" Character="character" Visibility="@(activeTab == "info")"
+                                 StateChanged="@(OnCharacterUpdated)"></CharacterHomeUI>
+
+                <div style="display: @(activeTab == "chat" ? "block" : "none"); height: 100%;">
+                    <ChatWindowUI @ref="chatWindowUI" CharacterName="@Name"/>
+                </div>
+                <div style="display: @(activeTab == "history" ? "block" : "none"); height: 100%;">
+                    <ChatHistoryUI Activity="@characterHomeUI?.Activity"></ChatHistoryUI>
+                </div>
+                <div
+                    style="display: @(activeTab == "plugins" ? "flex" : "none"); height: 100%; flex-direction: column; overflow: hidden;">
+                    <div style="padding: 24px 24px 0 24px;">
+                        <Title Level="4">活跃插件配置与监控</Title>
+                    </div>
+                    <div style="flex: 1; overflow: hidden;">
+                        <PluginManagementView
+                            Character="@character"
+                            ChatActivity="@characterHomeUI?.Activity"
+                            IsReadOnly="true"
+                            PluginFilter="@(id => characterHomeUI != null && characterHomeUI.PluginIDs.Contains(id))"/>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public string Name { get; set; } = "";
+
+    Character? character;
+    CharacterHomeUI? characterHomeUI;
+    ChatWindowUI? chatWindowUI;
+
+    string activeTab = "info";
+
+    protected override void OnParametersSet()
+    {
+        character = CharacterSystem.GetAllCharacters().FirstOrDefault(c => c.Name == Name);
+    }
+
+    void OpenStorageDirectory()
+    {
+        if (character == null) return;
+        string path = System.IO.Path.GetFullPath($"{Basic.AlifePath.StorageFolderPath}/{character.StorageKey}");
+        if (!System.IO.Directory.Exists(path))
+        {
+            System.IO.Directory.CreateDirectory(path);
+        }
+
+        try
+        {
+            System.Diagnostics.Process.Start("explorer.exe", path);
+        }
+        catch (Exception ex)
+        {
+            _ = NotificationService.Error(new NotificationConfig { Message = $"无法打开目录喵：{ex.Message}" });
+        }
+    }
+
+    void OnCharacterUpdated()
+    {
+        StateHasChanged();
+        chatWindowUI?.UpdateState();
+    }
+}

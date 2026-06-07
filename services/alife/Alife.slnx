@@ -1,0 +1,36 @@
+<Solution>
+  <Folder Name="/Demos/">
+    <Project Path="Demos/Alife.Demo.DeskPet/Alife.Demo.DeskPet.csproj" />
+    <Project Path="Demos/Alife.Demo.Framework/Alife.Demo.Framework.csproj" />
+    <Project Path="Demos/Alife.Demo.Mcp/Alife.Demo.Mcp.csproj" />
+    <Project Path="Demos/Alife.Demo.Memory/Alife.Demo.Memory.csproj" />
+    <Project Path="Demos/Alife.Demo.Plugin/Alife.Demo.Plugin.csproj" />
+    <Project Path="Demos/Alife.Demo.Python/Alife.Demo.Python.csproj" />
+    <Project Path="Demos/Alife.Demo.QChat/Alife.Demo.QChat.csproj" />
+    <Project Path="Demos/Alife.Demo.Speech/Alife.Demo.Speech.csproj" />
+    <Project Path="Demos/Alife.Demo.Vision/Alife.Demo.Vision.csproj" />
+  </Folder>
+  <Folder Name="/Sources/">
+    <Project Path="Sources/Alife.Basic/Alife.Basic.csproj" />
+    <Project Path="Sources/Alife.Framework/Alife.Framework.csproj" />
+    <Project Path="Sources/Alife.Implement/Alife.Implement.csproj" />
+    <Project Path="Sources/Alife/Alife.csproj" />
+  </Folder>
+  <Folder Name="/Sources/Alife.Function/">
+    <Project Path="Sources/Alife.Function/Alife.Function.DeskPet/Alife.Function.DeskPet.csproj" />
+    <Project Path="Sources/Alife.Function/Alife.Function.Interpreter/Alife.Function.Interpreter.csproj" />
+    <Project Path="Sources/Alife.Function/Alife.Function.Memory\Alife.Function.Memory.csproj" />
+    <Project Path="Sources/Alife.Function/Alife.Function.QChat/Alife.Function.QChat.csproj" />
+    <Project Path="Sources/Alife.Function/Alife.Function.Speech/Alife.Function.Speech.csproj" />
+    <Project Path="Sources/Alife.Function/Alife.Function.Vision/Alife.Function.Vision.csproj" />
+    <Project Path="Sources\Alife.Function\Alife.Function.Browser\Alife.Function.Browser.csproj" />
+  </Folder>
+  <Folder Name="/Tests/">
+    <Project Path="Tests/Alife.Test.DeskPet/Alife.Test.DeskPet.csproj" />
+    <Project Path="Tests/Alife.Test.Interpreter/Alife.Test.Interpreter.csproj" />
+    <Project Path="Tests/Alife.Test.Speech/Alife.Test.Speech.csproj" />
+    <Project Path="Tests\Alife.Test.Browser\Alife.Test.Browser.csproj" />
+    <Project Path="Tests\Alife.Test.Python\Alife.Test.Python.csproj" />
+    <Project Path="Tests\Alife.Test.QChat\Alife.Test.QChat.csproj" />
+  </Folder>
+</Solution>

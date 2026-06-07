@@ -1,0 +1,170 @@
+@inject CharacterSystem CharacterSystem
+@inject PluginSystem PluginSystem
+@inject ConfigurationSystem ConfigurationSystem
+@inject NavigationManager Navigation
+@inject INotificationService NotificationService
+
+<div class="welcome-container">
+    <div class="welcome-card">
+        <div class="welcome-icon">
+            <Icon Type="@IconType.Outline.Rocket" Style="font-size: 64px; color: #1890ff;"/>
+        </div>
+
+        <Title Level="1" Style="margin-top: 24px; color: #1a1a1a;">欢迎来到 Alife，创建你的第一个桌宠吧！</Title>
+        <Paragraph Style="font-size: 16px; color: rgba(0,0,0,0.45); max-width: 520px; margin: 0 auto 40px auto;">
+            Alife 是一款因个人兴趣而诞生的开源桌宠代理框架，力求实现一键部署、实用长久、高互动感、高扩展性的陪伴体验。项目和交互都力求简单透明，没有负担也没有约束，因为一切都是个人的奇思妙想。
+        </Paragraph>
+
+        <Flex Gap="@FlexGap.Large" Align="@FlexAlign.Center" Justify="@FlexJustify.Center">
+            <Button Type="@ButtonType.Primary"
+                    Size="@ButtonSize.Large"
+                    Icon="@IconType.Outline.Thunderbolt"
+                    OnClick="@(() => isQuickSetupVisible = true)"
+                    Style="height: 48px; border-radius: 24px; padding: 0 32px; font-weight: bold; box-shadow: 0 4px 12px rgba(24,144,255,0.3)">
+                立即创建默认桌宠
+            </Button>
+        </Flex>
+
+        <div
+            style="margin-top: 40px; text-align: left; background: rgba(0,0,0,0.02); border-radius: 12px; padding: 16px; border: 1px solid rgba(0,0,0,0.05);">
+            <Text Strong style="display: block; margin-bottom: 8px;">全局数据存储目录 (StorageFolderPath)</Text>
+            <Flex Gap="@("small")">
+                <Input @bind-Value="storageFolderPath" Placeholder="默认为 我的文档\Alife 目录" Style="flex: 1;"/>
+                <Button Icon="@IconType.Outline.FolderOpen" OnClick="@(OnPickFolder)"></Button>
+                <Button Type="@ButtonType.Default" OnClick="@(SaveStoragePath)">保存修改</Button>
+            </Flex>
+            <Text Type="@TextElementType.Secondary" Style="font-size: 12px; margin-top: 8px; display: block;">提示：将其定位到
+                OneDrive / 坚果云等跨设备目录，即可实现多端无缝同步喵！(重启生效)
+            </Text>
+        </div>
+
+        <div style="margin-top: 40px; color: rgba(0,0,0,0.25); font-size: 12px;">
+            <p>Alife Project - Lightweight Desktop Pet Framework</p>
+        </div>
+    </div>
+</div>
+<Modal Title="极速配置助手"
+       Visible="@isQuickSetupVisible"
+       OnOk="@OnQuickSetupConfirm"
+       OnCancel="@(() => isQuickSetupVisible = false)"
+       Width="500">
+    <div style="margin-bottom: 24px;">
+        <Text>请输入您的 OpenAI 兼容协议接口信息喵！填写后我们将自动配置并创建首个专属智能角色助理。</Text>
+    </div>
+    <Form TModel="ChatServiceConfig" Model="quickConfig" Layout="@FormLayout.Vertical">
+        <FormItem Label="API Base URL (端点)">
+            <Input @bind-Value="quickConfig.endpoint" Placeholder="例如: https://api.deepseek.com/v1"/>
+        </FormItem>
+        <FormItem Label="Model ID (模型名称)">
+            <Input @bind-Value="quickConfig.modelId" Placeholder="例如: deepseek-chat"/>
+        </FormItem>
+        <FormItem Label="API Key (密钥)">
+            <InputPassword @bind-Value="quickConfig.apiKey" Placeholder="填入你的 API Key 🔑"/>
+        </FormItem>
+    </Form>
+</Modal>
+
+@code {
+    bool isQuickSetupVisible;
+    readonly ChatServiceConfig quickConfig = new();
+    string storageFolderPath = Basic.AlifePath.StorageFolderPath;
+
+    void OnPickFolder()
+    {
+        var result = Basic.AlifePlatform.PickFolder();
+        if (!string.IsNullOrWhiteSpace(result))
+        {
+            storageFolderPath = result;
+        }
+    }
+
+    void SaveStoragePath()
+    {
+        if (!string.IsNullOrWhiteSpace(storageFolderPath))
+        {
+            Basic.AlifePath.SetStorageFolderPath(storageFolderPath);
+            _ = NotificationService.Success(new NotificationConfig() { Message = "存储路径已保存！重启将启用新路径的数据喵~" });
+        }
+    }
+
+    void OnQuickSetupConfirm()
+    {
+        if (string.IsNullOrWhiteSpace(quickConfig.apiKey) || string.IsNullOrWhiteSpace(quickConfig.endpoint)) return;
+
+        if (!string.IsNullOrWhiteSpace(storageFolderPath))
+            Basic.AlifePath.SetStorageFolderPath(storageFolderPath);
+
+        // 覆盖保存全局组态
+        ConfigurationSystem.SetConfiguration(typeof(ChatService), quickConfig);
+
+        // 使用默认“真央”角色（如果没有就建一个）
+        Character character = CharacterSystem.GetAllCharacters().FirstOrDefault(c => c.Name == "真央") ??
+                              CharacterSystem.CreateCharacter("真央");
+        character.Plugins.Add(PluginSystem.GetPluginID(typeof(ChatService)));
+        character.Plugins.Add(PluginSystem.GetPluginID(typeof(FunctionService)));
+        character.Plugins.Add("Alife.Implement.EventService");
+        character.Plugins.Add("Alife.Implement.MessageFilterService");
+        character.Plugins.Add("Alife.Implement.MemoryService");
+        character.Plugins.Add("Alife.Implement.VirtualWorldService");
+        character.Plugins.Add("Alife.Implement.QChatService");
+        character.Plugins.Add("Alife.Implement.SpeechService");
+        character.Plugins.Add("Alife.Implement.DeskPetService");
+        character.Plugins.Add("Alife.Implement.McpService");
+        character.Plugins.Add("Alife.Implement.SkillService");
+        character.Plugins.Add("Alife.Implement.PythonService");
+        character.Plugins.Add("Alife.Implement.SurfingService");
+        character.Plugins.Add("Alife.Implement.VisionService");
+        CharacterSystem.SaveCharacter(character);
+
+        isQuickSetupVisible = false;
+
+        // 通知跃迁
+        Navigation.NavigateTo($"/agent/{character.Name}");
+    }
+}
+
+<style>
+    .welcome-container {
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: radial-gradient(circle at top right, rgba(24, 144, 255, 0.05) 0%, transparent 40%),
+        radial-gradient(circle at bottom left, rgba(24, 144, 255, 0.05) 0%, transparent 40%);
+        animation: fadeIn 0.8s ease-out;
+    }
+
+    .welcome-card {
+        text-align: center;
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(20px);
+        padding: 60px 40px;
+        border-radius: 32px;
+        border: 1px solid rgba(255, 255, 255, 0.8);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.05);
+    }
+
+    .welcome-icon {
+        animation: float 3s ease-in-out infinite;
+    }
+
+    @@keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @@keyframes float {
+        0%, 100% {
+            transform: translateY(0px);
+        }
+        50% {
+            transform: translateY(-15px);
+        }
+    }
+</style>

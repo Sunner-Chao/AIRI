@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Pet Renderer</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    
+    <div id="bubble-container">
+        <div id="bubble"></div>
+    </div>
+
+    <div id="thinking-indicator">
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+    </div>
+
+    <div id="input-container">
+        <input type="text" id="chat-input" placeholder="和真央聊聊吧喵..." autocomplete="off">
+        <button id="send-btn">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+        </button>
+    </div>
+
+    <script src="lib/pixi.min.js"></script>
+    <script src="lib/live2d.min.js"></script>
+    <script src="lib/live2dcubismcore.min.js"></script>
+    <script src="lib/pixi-live2d-display.min.js"></script>
+    <script src="pet.js"></script>
+</body>
+</html>

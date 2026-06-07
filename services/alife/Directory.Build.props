@@ -1,0 +1,24 @@
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net9.0-windows10.0.19041.0</TargetFramework>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+    <OutputPath>$(MSBuildThisFileDirectory)Outputs\$(MSBuildProjectName)\</OutputPath>
+    <OutDir>$(OutputPath)</OutDir>
+    <RollForward>LatestMajor</RollForward>
+    <SelfContained>false</SelfContained>
+    <PublishSelfContained>false</PublishSelfContained>
+    
+    <!-- 核心修复：全局禁用 MVC 零件发现逻辑 -->
+    <EnableDefaultMvcApplicationPartsDiscovery>false</EnableDefaultMvcApplicationPartsDiscovery>
+    <GenerateMvcApplicationPartAttribute>false</GenerateMvcApplicationPartAttribute>
+  </PropertyGroup>
+
+  <!-- 终极补丁：为所有引用路径强制赋予 FusionName 元数据，防止 Razor SDK 崩溃 -->
+  <ItemDefinitionGroup>
+    <ReferencePath>
+      <FusionName>%(FileName)</FusionName>
+    </ReferencePath>
+  </ItemDefinitionGroup>
+
+</Project>

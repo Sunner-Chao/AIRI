@@ -1,0 +1,308 @@
+@namespace Alife.Implement
+@inherits Alife.Framework.PluginUIBase<QChatService, QChatConfig>
+@implements IDisposable
+@inject IMessageService MessageService
+
+<div style="background: #fff; padding: 20px; border-radius: 8px;">
+    @* ───── 运行时状态 ───── *@
+    @if (Plugin != null)
+    {
+        <Title Level="4" Style="margin: 0;">群消息接收状态</Title>
+        <Tabs @bind-ActiveKey="@activeTabKey" Style="margin-bottom: 24px;">
+            <TabPane Tab="系统概览" Key="overview">
+                <GridRow Gutter="16">
+                    <GridCol Span="8">
+                        <Card Size="CardSize.Small" Style="border-radius: 8px;">
+                            <Text Type="TextElementType.Secondary" Style="display: block; margin-bottom: 4px;">
+                                总缓存消息
+                            </Text>
+                            <Text Strong
+                                  Style="font-size: 18px;">@Plugin.GroupStates.Values.Sum(i => i.MessageBuffer.Count) 条
+                            </Text>
+                        </Card>
+                    </GridCol>
+                    <GridCol Span="16">
+                        <Card Size="CardSize.Small" Style="border-radius: 8px;">
+                            <Text Type="TextElementType.Secondary" Style="display: block; margin-bottom: 4px;">
+                                活跃群组统计
+                            </Text>
+                            <Text Strong>@Plugin.GroupStates.Count(kv => kv.Value.IsEnabled) 个激活中 /
+                                共 @Plugin.GroupStates.Count 个记录
+                            </Text>
+                        </Card>
+                    </GridCol>
+                </GridRow>
+            </TabPane>
+
+            @foreach (var kv in Plugin.GroupStates.OrderBy(x => x.Key).Take(20))
+            {
+                var groupId = kv.Key;
+                var state = kv.Value;
+                <TabPane Key="@groupId.ToString()">
+                    <TabTemplate>
+                        <span>
+                            @(state.IsEnabled ? "🟢" : "⚪") @groupId
+                            @if (state.MessageBuffer.Count > 0)
+                            {
+                                <Badge Count="@state.MessageBuffer.Count" Style="margin-left: 4px;"/>
+                            }
+                        </span>
+                    </TabTemplate>
+                    <ChildContent>
+                        <Card Size="CardSize.Small" Style="border-radius: 8px;">
+                            <Flex Direction="FlexDirection.Vertical">
+                                <Flex Justify="FlexJustify.SpaceBetween" Align="FlexAlign.Center"
+                                      Style="margin-bottom: 12px;">
+                                    <div>
+                                        <Space Align="SpaceAlign.Center">
+                                            <SpaceItem>
+                                                <Text Strong Style="font-size: 16px;">群号: @groupId</Text>
+                                            </SpaceItem>
+                                            <SpaceItem>
+                                                @{
+                                                    var remaining = Configuration.FlushInterval - (DateTime.Now - state.LastFlushedTime).TotalSeconds;
+                                                }
+                                                <Tag Color="TagColor.Orange">
+                                                    <Icon Type="@IconType.Outline.ClockCircle"/>
+                                                    @(state.IsEnabled || state.MessageBuffer.Count != 0
+                                                        ? $"下次推送: {Math.Ceiling(Math.Max(0, remaining))}s"
+                                                        : "休眠中")
+                                                </Tag>
+                                            </SpaceItem>
+                                        </Space>
+                                        @if (!string.IsNullOrEmpty(state.Tag))
+                                        {
+                                            <div style="margin-top: 4px;">
+                                                <Tag Color="TagColor.Blue">标题: @state.Tag</Tag>
+                                            </div>
+                                        }
+                                        <div style="margin-top: 4px;">
+                                            <Text Type="TextElementType.Secondary" Style="font-size: 12px;">
+                                                最后活动: @state.LastActivityTime.ToString("HH:mm:ss")
+                                            </Text>
+                                        </div>
+                                    </div>
+                                    <Space>
+                                        <SpaceItem>
+                                            <Button Danger="@state.IsEnabled"
+                                                    Type="@ButtonType.Primary"
+                                                    Size="@ButtonSize.Small"
+                                                    OnClick="@(() => Plugin.QGroup(groupId, !state.IsEnabled))">
+                                                @(state.IsEnabled ? "关闭" : "开启")
+                                            </Button>
+                                        </SpaceItem>
+                                        <SpaceItem>
+                                            <Button Type="@ButtonType.Default"
+                                                    Size="@ButtonSize.Small"
+                                                    Disabled="@(state.MessageBuffer.Count == 0)"
+                                                    OnClick="@(() => Plugin.FlushGroupBuffer(state))">
+                                                手动推送
+                                            </Button>
+                                        </SpaceItem>
+                                    </Space>
+                                </Flex>
+
+                                <Divider Style="margin: 4px 0;"/>
+
+                                <div
+                                    style="max-height: 200px; overflow-y: auto; background: #fafafa; padding: 8px; border-radius: 4px; font-family: monospace; font-size: 12px;">
+                                    @if (state.MessageBuffer.Count > 0)
+                                    {
+                                        @foreach (var msg in state.MessageBuffer)
+                                        {
+                                            <div
+                                                style="margin-bottom: 4px; border-bottom: 1px solid #f0f0f0; padding-bottom: 2px;">
+                                                @msg
+                                            </div>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <div style="color: #bfbfbf; text-align: center; padding: 20px;">
+                                            暂无缓存消息
+                                        </div>
+                                    }
+                                </div>
+                            </Flex>
+                        </Card>
+                    </ChildContent>
+                </TabPane>
+            }
+        </Tabs>
+        <Divider></Divider>
+    }
+
+    <Flex Justify="FlexJustify.SpaceBetween" Align="FlexAlign.Center" Style="margin-bottom: 24px;">
+        <Title Level="4" Style="margin: 0;">聊天配置</Title>
+        <div style="display: flex; align-items: center; gap: 8px;">
+            @if (Plugin is {} qChat)
+            {
+                <Badge Status="@(qChat.IsConnected ? BadgeStatus.Success : BadgeStatus.Error)"
+                       Text="@(qChat.IsConnected ? "已连接" : "未连接")"/>
+                <Button Type="@ButtonType.Default"
+                        Size="@ButtonSize.Small"
+                        Icon="@IconType.Outline.Reload"
+                        Loading="@isReconnecting"
+                        OnClick="Reconnect">
+                    重连
+                </Button>
+            }
+        </div>
+    </Flex>
+
+    <Form TModel="QChatConfig" Model="@Configuration" Layout="@FormLayout.Vertical">
+        <FormItem Label="WebSocket URL">
+            <Input @bind-Value="@Configuration.Url" placeholder="例如: ws://127.0.0.1:3004"/>
+        </FormItem>
+        <FormItem Label="机器人 ID">
+            <Input @bind-Value="@Configuration.BotId" Style="width: 100%;"/>
+        </FormItem>
+        <FormItem Label="主人 ID">
+            <Input @bind-Value="@Configuration.OwnerId" Style="width: 100%;"/>
+        </FormItem>
+        <FormItem Label="回复提示">
+            <TextArea @bind-Value="@Configuration.AppendChatPrompt" Rows="2"
+                      Placeholder="附加在消息末尾的指导提示词"></TextArea>
+        </FormItem>
+
+
+
+        @* ───── 群监听唤醒 ───── *@
+        <Divider>群消息接收开启条件</Divider>
+        <FormItem Label="屏蔽群号">
+            <Input @bind-Value="@Configuration.IgnoredGroup" Placeholder="每个群号间用英文逗号分隔，如：1111,2222"/>
+            <Text Type="TextElementType.Secondary" Style="font-size: 11px;">上述群号的消息将会被完全屏蔽不可见。</Text>
+        </FormItem>
+        <FormItem Label="唤醒关键词">
+            <Input @bind-Value="@Configuration.WakingWords" Placeholder="每个关键词间用英文逗号分隔，如: 小猫,喵喵"/>
+            <Text Type="TextElementType.Secondary" Style="font-size: 11px;">
+                默认只有被@@或戳一戳时才开始群聊接收。如果原始群信息中包含上述关键词，则也会打开。
+            </Text>
+        </FormItem>
+        <FormItem Label="自动开启概率">
+            <AntDesign.InputNumber @bind-Value="@Configuration.ProactiveChatProbability" Min="0f" Max="1f"
+                                   Step="0.05f"
+                                   Style="width: 100%;"/>
+            <Text Type="TextElementType.Secondary" Style="font-size: 11px;">
+                0 表示关闭。收到非@@、非唤醒消息时，会尝试以此概率打开群聊接收。
+            </Text>
+        </FormItem>
+
+        @* ───── 群消息缓存 ───── *@
+        <Divider>群消息缓存推送条件</Divider>
+        <Paragraph Type="TextElementType.Secondary">群消息优先存储到缓冲区中，当触发条件时才会推送给AI。
+        </Paragraph>
+        <FormItem Label="最大缓存数量">
+            <AntDesign.InputNumber @bind-Value="@Configuration.MaxBufferMessages" Min="-1"
+                                   Style="width: 100%;"/>
+            <Text Type="TextElementType.Secondary" Style="font-size: 11px;">
+                当缓存消息超出最大数量时，将会立即推送。值为-1表示不限数量。
+            </Text>
+        </FormItem>
+        <FormItem Label="推送倒计时 (秒)">
+            <AntDesign.InputNumber @bind-Value="@Configuration.FlushInterval" Min="0.5f" Step="0.5f"
+                                   Style="width: 100%;"/>
+            <Text Type="TextElementType.Secondary" Style="font-size: 11px;">
+                每隔一段时间自动推送缓冲区，无论是否溢出。
+            </Text>
+        </FormItem>
+        <FormItem Label="启用防抖">
+            <Switch @bind-Value="@Configuration.DebounceEnabled"/>
+            <br/>
+            <Text Type="TextElementType.Secondary" Style="font-size: 11px;">
+                开启后当收到新的群消息时，会重置发送倒计时。
+            </Text>
+        </FormItem>
+        
+        @* ───── 群消息关闭 ───── *@
+        <Divider>群消息接收关闭条件</Divider>
+        <FormItem Label="自动休眠时间 (分钟)">
+            <AntDesign.InputNumber @bind-Value="@Configuration.AutoCloseMinutes" Min="1f" Style="width: 100%;"/>
+            <Text Type="TextElementType.Secondary" Style="font-size: 11px;">
+                群聊接收期间，若AI长期不参与，则超过此时间后将自动关闭群聊接收。
+            </Text>
+        </FormItem>
+        <FormItem Label="回复后立即停用">
+            <Switch @bind-Value="@Configuration.CloseGroupAfterReply"/>
+            <br/>
+            <Text Type="TextElementType.Secondary" Style="font-size: 11px;">
+                AI回复群消息后立即关闭当前群消息接收。
+            </Text>
+        </FormItem>
+
+        @* ───── 快速预设 ───── *@
+        <Divider>快速预设</Divider>
+        <Flex Justify="FlexJustify.Center" Align="FlexAlign.Center" Style="margin-bottom: 24px; gap: 16px;">
+            <Tooltip
+                Title="将QQ工具作为AI自己的一套娱乐工具，让AI自己决定要不要进行主动的群聊活动。（默认推荐）">
+                <Button OnClick="@ApplyDesktopPetPreset" Icon="@IconType.Outline.Smile">开关监听式
+                </Button>
+            </Tooltip>
+            <Tooltip
+                Title="强制性低概率回复群消息，不稳定聊天，适合作为全天挂机的冒泡机器人，同时减少词元开销。">
+                <Button OnClick="@ApplyGroupChatPreset" Icon="@IconType.Outline.Robot">随机触发式
+                </Button>
+            </Tooltip>
+        </Flex>
+    </Form>
+</div>
+
+@code {
+    string activeTabKey = "overview";
+    bool isReconnecting;
+    System.Timers.Timer? refreshTimer;
+
+    protected override void OnInitialized()
+    {
+        refreshTimer = new System.Timers.Timer(1000);
+        refreshTimer.Elapsed += (_, _) => InvokeAsync(StateHasChanged);
+        refreshTimer.Start();
+    }
+
+    void ApplyDesktopPetPreset()
+    {
+        Configuration.DebounceEnabled = false;
+        Configuration.FlushInterval = 15f;
+        Configuration.MaxBufferMessages = -1;
+        Configuration.ProactiveChatProbability = 0;
+        Configuration.CloseGroupAfterReply = false;
+    }
+
+    void ApplyGroupChatPreset()
+    {
+        Configuration.DebounceEnabled = true;
+        Configuration.FlushInterval = 3f;
+        Configuration.MaxBufferMessages = 5;
+        Configuration.ProactiveChatProbability = 0.05f;
+        Configuration.CloseGroupAfterReply = true;
+    }
+
+    async Task Reconnect()
+    {
+        if (Plugin is {} qChat)
+        {
+            isReconnecting = true;
+            try
+            {
+                await qChat.ReconnectAsync();
+                MessageService.Success("重连指令已发送喵！");
+            }
+            catch (Exception ex)
+            {
+                MessageService.Error($"重连失败: {ex.Message}");
+            }
+            finally
+            {
+                isReconnecting = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    public void Dispose()
+    {
+        refreshTimer?.Stop();
+        refreshTimer?.Dispose();
+    }
+
+}

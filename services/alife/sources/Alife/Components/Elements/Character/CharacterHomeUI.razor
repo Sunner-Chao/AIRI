@@ -1,0 +1,258 @@
+@using System.Reflection
+@using Alife.Components.Elements.Character
+@using Alife.Components.Elements.Utility
+@inject PluginSystem PluginSystem
+@inject ChatActivitySystem ChatActivitySystem
+@inject CharacterSystem CharacterSystem
+@inject INotificationService NotificationService
+@implements IDisposable
+
+<ErrorWindowUI Title="角色激活失败喵！" @bind-Value="@activityException"></ErrorWindowUI>
+
+<CharacterLoadingUI Visible="@isLoading"
+                    Title=@($"正在激活 {Character?.Name}")
+                    TaskDescription="@loadingTask"
+                    Progress="@loadingProgress"/>
+
+@if (Visibility)
+{
+    <div style="padding: 24px; height: 100%; overflow-y: auto;">
+        @if (Character != null)
+        {
+            <GridRow Gutter="16">
+                <!-- 第一列：状态与控制 -->
+                <GridCol Span="8">
+                    <Card Title="状态控制" Style="border-radius: 12px; height: 100%;">
+                        <Flex Direction="@FlexDirection.Vertical"
+                              Align="@FlexAlign.Center" Justify="@FlexJustify.Center"
+                              Style="padding: 24px 0;">
+                            <Avatar Size="@AvatarSize.Large"
+                                    Style="background: #1890ff; width: 80px; height: 80px; line-height: 80px; font-size: 32px; margin-bottom: 24px;">
+                                @(Character.Name.FirstOrDefault())
+                            </Avatar>
+                            <Title Level="2">@Character.Name</Title>
+
+                            <div style="margin: 24px 0;">
+                                @if (activity != null)
+                                {
+                                    <Tag Color="@("green")" Style="padding: 4px 12px; font-size: 14px;">
+                                        正在活跃中
+                                    </Tag>
+                                    <div style="margin-top: 16px;">
+                                        <Button Danger Type="@ButtonType.Primary" Block
+                                                Size="@ButtonSize.Large"
+                                                Icon="@IconType.Outline.Poweroff" OnClick="@(StopActivity)">停止运行
+                                        </Button>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <Tag Color="default" Style="padding: 4px 12px; font-size: 14px;">
+                                        待机中
+                                    </Tag>
+                                    <div style="margin-top: 16px;">
+                                        <Button id="btn-activate-character"
+                                                Type="@ButtonType.Primary" Block
+                                                Size="@ButtonSize.Large"
+                                                Icon="@IconType.Outline.Rocket" Loading="isLoading"
+                                                OnClick="@(StartActivity)">激活角色
+                                        </Button>
+                                    </div>
+                                }
+                            </div>
+                        </Flex>
+                    </Card>
+                </GridCol>
+
+                <!-- 第二列：核心设定与插件 -->
+                <GridCol Span="16">
+                    <Card Title="角色配置" Style="border-radius: 12px;">
+                        <Alert Message="提示" Description="角色活动时无法修改配置喵。" Type="@AlertType.Info"
+                               ShowIcon="true"
+                               Style="@($"margin-bottom: 12px; display: {(activity != null ? "block" : "none")}")"/>
+
+                        <Title Level="5">简介 (Description)</Title>
+                        <Input @bind-Value="Character.Description"
+                               Placeholder="一句话介绍一下角色，如：一只的猫娘。"
+                               Disabled="@(activity != null)"
+                               Style="margin-bottom: 16px; border-radius: 8px;"/>
+
+                        <Title Level="5">设定 (System Prompt)</Title>
+                        <TextArea MinRows="6" MaxRows="12" @bind-Value="Character.Prompt"
+                                  Disabled="@(activity != null)"
+                                  Style="margin-bottom: 24px; border-radius: 8px;"></TextArea>
+
+                        <Title Level="5">插件 (Plugins)</Title>
+                        <div
+                            style="max-height: 400px; overflow-y: auto; border: 1px solid #f0f0f0; border-radius: 8px; padding: 12px; background: @(activity != null ? "#fafafa" : "#fff")">
+                            <StringFolderSelectorUI
+                                Context="@(PluginSystem.GetPluginFolder())"
+                                ItemTitleFilter="@(fullName => GetPluginName(fullName))"
+                                IsChecking="pluginIDs"
+                                IsReadOnly="@(activity != null)"
+
+                                IsCheckingChanged="OnPluginCheckingChanged">
+                            </StringFolderSelectorUI>
+                        </div>
+                        @if (activity == null)
+                        {
+                            <div style="margin-top: 24px; text-align: right;">
+                                <Button id="btn-save-character-settings"
+                                        Type="@ButtonType.Primary"
+                                        Size="@ButtonSize.Large" Icon="@IconType.Outline.Save"
+                                        Loading="isSaving" OnClick="@(SaveSettings)">保存变更
+                                </Button>
+                            </div>
+                        }
+                    </Card>
+                </GridCol>
+            </GridRow>
+        }
+        else
+        {
+            <Empty Description="@("角色为空！")"/>
+        }
+
+        @if (activity != null)
+        {
+            <Divider>隐含上下文 (Implicit Context / Effective Tools)</Divider>
+            <Card Title="函数调用" Style="border-radius: 12px; margin-top: 16px;">
+                @foreach (var sysPrompt in activity.GetImplicitFunctionContext())
+                {
+                    <Paragraph Copyable
+                               style="white-space: pre-wrap; background: #fafafa; padding: 12px; border-radius: 4px; border: 1px solid #f0f0f0; margin-bottom: 12px;">
+                        @sysPrompt
+                    </Paragraph>
+                }
+            </Card>
+        }
+    </div>
+}
+
+@code
+{
+
+    public ChatActivity? Activity => activity;
+    public bool IsLoading => isLoading;
+    public HashSet<string> PluginIDs => pluginIDs;
+
+    public async Task StartActivity()
+    {
+        if (Character == null || isLoading || activity != null)
+            return;
+
+        isLoading = true;
+        try
+        {
+            Progress<(string, float)> progress = new(tuple => {
+                loadingTask = tuple.Item1;
+                loadingProgress = tuple.Item2;
+                InvokeAsync(UpdateState);
+            });
+
+            await Task.Run(async () => {
+                try
+                {
+                    activity = await ChatActivitySystem.Play(Character, progress);
+                }
+                catch (Exception ex)
+                {
+                    activityException = ex;
+                }
+            });
+        }
+        finally
+        {
+            isLoading = false;
+            await InvokeAsync(UpdateState);
+        }
+    }
+
+    public async Task StopActivity()
+    {
+        if (Character == null)
+            return;
+
+        await ChatActivitySystem.Stop(Character);
+        UpdateState();
+    }
+
+    [Parameter] public Character? Character { get; set; }
+    [Parameter] public bool Visibility { get; set; }
+    [Parameter] public EventCallback StateChanged { get; set; }
+
+    ChatActivity? activity;
+    Exception? activityException;
+    bool isLoading;
+    string loadingTask = "正在初始化环境喵...";
+    float loadingProgress;
+    bool isSaving;
+    HashSet<string> pluginIDs = new();
+
+
+    protected override void OnInitialized()
+    {
+        if (Character != null)
+        {
+            pluginIDs = Character.Plugins.ToHashSet();
+            activity = ChatActivitySystem.GetAllChatActivities().FirstOrDefault(a => a.Character.Name == Character.Name);
+            UpdateState();
+        }
+
+        ChatActivitySystem.Destroyed += OnChatActivityDestroyed;
+    }
+
+    public void Dispose()
+    {
+        ChatActivitySystem.Destroyed -= OnChatActivityDestroyed;
+    }
+
+    void OnChatActivityDestroyed(ChatActivity obj)
+    {
+        if (activity == obj)
+            activity = null;
+    }
+
+
+    void UpdateState()
+    {
+        StateHasChanged();
+        StateChanged.InvokeAsync();
+    }
+
+    void OnPluginCheckingChanged(HashSet<string> ids)
+    {
+        if (activity != null)
+            return;
+
+        pluginIDs = ids;
+    }
+
+    string GetPluginName(string fullName)
+    {
+        Type? type = PluginSystem.GetPlugin(fullName);
+        if (type == null) return "[未知插件] " + fullName;
+        PluginAttribute? attr = type.GetCustomAttribute<PluginAttribute>();
+        return attr?.Name ?? type.Name;
+    }
+
+    void SaveSettings()
+    {
+        if (isSaving || Character == null || activity != null) return;
+        isSaving = true;
+        try
+        {
+            Character.Plugins = pluginIDs.ToHashSet();
+            CharacterSystem.SaveCharacter(Character);
+
+            _ = NotificationService.Success(new NotificationConfig { Message = "角色配置已成功保存！" });
+        }
+        finally
+        {
+            isSaving = false;
+            _ = InvokeAsync(StateHasChanged);
+        }
+    }
+
+
+}

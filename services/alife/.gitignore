@@ -1,0 +1,36 @@
+# Runtime/build outputs.
+.dotnet/
+Runtime/
+Outputs/
+Storage/
+**/bin/
+**/obj/
+**/.vs/
+
+# Logs and local data.
+*.log
+*.db
+*.sqlite
+*.sqlite3
+
+# Python caches.
+__pycache__/
+**/__pycache__/
+.mypy_cache/
+.ruff_cache/
+
+# Downloaded packages and model/runtime binaries.
+*.dll
+*.exe
+*.pdb
+*.bin
+*.onnx
+*.safetensors
+*.pt
+*.pth
+*.ckpt
+*.nupkg
+*.zip
+*.7z
+*.tar
+*.gz

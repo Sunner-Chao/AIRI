@@ -1,0 +1,15 @@
+@inherits LayoutComponentBase
+
+<div class="app-container">
+    <!-- 第一层 Sider: 全局主导航 -->
+    <div class="global-sidebar" style="width: 80px; flex-shrink: 0; padding-top: 24px;">
+        <NavMenu/>
+    </div>
+
+    <!-- 主内容区 -->
+    <div class="main-content">
+        @Body
+    </div>
+</div>
+
+<AntContainer/>

@@ -1,0 +1,2 @@
+# Runtime audio/model artifacts are intentionally ignored by the parent AIRI
+# repository. Keep this embedded source tree free of Git LFS requirements.

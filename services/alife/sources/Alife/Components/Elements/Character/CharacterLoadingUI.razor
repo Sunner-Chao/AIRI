@@ -1,0 +1,129 @@
+@implements IDisposable
+
+<Modal Visible="@Visible"
+       Title="@Title"
+       Footer="null"
+       Closable="false"
+       MaskClosable="false"
+       Centered="true">
+    <Flex Direction="@FlexDirection.Vertical" Align="@FlexAlign.Center"
+          Gap="@FlexGap.Large">
+        <div class="loading-animation-container">
+            @if (Progress > 0)
+            {
+                <Progress Type="ProgressType.Circle" Percent="@((int)(Progress * 100))"
+                          Status="@ProgressStatus.Active"></Progress>
+            }
+            else
+            {
+                <Spin Size="@SpinSize.Large"/>
+            }
+            <div class="heartbeat-dot"></div>
+        </div>
+
+        <div style="text-align: center;">
+            <Text Strong Style="font-size: 16px; display: block; margin-bottom: 8px;">@TaskDescription</Text>
+            <div class="dynamic-tip-area">
+                <Icon Type="loading"/>
+                <Text Type="@TextElementType.Secondary">@currentTip</Text>
+            </div>
+        </div>
+
+        <Text Type="@TextElementType.Secondary" Style="font-size: 12px; margin-top: 12px;">
+            涉及模型加载，根据情况可能时间较长，请耐心等待...（注意观察任务管理器）
+        </Text>
+    </Flex>
+</Modal>
+
+@code {
+    [Parameter] public bool Visible { get; set; }
+    [Parameter] public float Progress { get; set; }
+    [Parameter] public string Title { get; set; } = "正在唤醒角色...";
+    [Parameter] public string TaskDescription { get; set; } = "正在初始化环境喵...";
+
+    private string currentTip = "正在感知数字生命脉动...";
+    private System.Timers.Timer? tipTimer;
+    private int tipIndex = 0;
+
+    private readonly string[] tips =
+    [
+        "正在同步量子记忆纠缠...",
+        "正在构建情感共鸣矩阵...",
+        "正在打捞电子梦境碎片...",
+        "思维链条正在逐一啮合...",
+        "正在为数字生命注入灵魂...",
+        "正在优化突触连接速度...",
+        "正在深渊中搜寻语言碎片...",
+        "正在校准性格色彩偏差..."
+    ];
+
+    protected override void OnInitialized()
+    {
+        tipTimer = new System.Timers.Timer(3000);
+        tipTimer.Elapsed += (_, _) =>
+        {
+            tipIndex = (tipIndex + 1) % tips.Length;
+            currentTip = tips[tipIndex];
+            InvokeAsync(StateHasChanged);
+        };
+        tipTimer.Start();
+    }
+
+    public void Dispose()
+    {
+        tipTimer?.Stop();
+        tipTimer?.Dispose();
+    }
+
+}
+
+<style>
+    .loading-animation-container {
+        position: relative;
+        padding: 10px;
+    }
+
+    .heartbeat-dot {
+        position: absolute;
+        bottom: 10px;
+        right: 10px;
+        width: 12px;
+        height: 12px;
+        background-color: #52c41a;
+        border-radius: 50%;
+        box-shadow: 0 0 0 rgba(82, 196, 26, 0.4);
+        animation: pulse 1.5s infinite;
+    }
+
+    .dynamic-tip-area {
+        height: 24px;
+        overflow: hidden;
+        animation: slideIn 0.5s ease-out;
+    }
+
+    @@keyframes pulse {
+        0% {
+            transform: scale(0.95);
+            box-shadow: 0 0 0 0 rgba(82, 196, 26, 0.7);
+        }
+        70% {
+            transform: scale(1.1);
+            box-shadow: 0 0 0 10px rgba(82, 196, 26, 0);
+        }
+        100% {
+            transform: scale(0.95);
+            box-shadow: 0 0 0 0 rgba(82, 196, 26, 0);
+        }
+    }
+
+    @@keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+</style>

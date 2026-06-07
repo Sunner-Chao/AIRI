@@ -1,0 +1,193 @@
+.Trash/
+.trash/
+.DS_Store
+
+# Node.js
+node_modules
+
+# Logs
+*.log
+*.logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+.idea
+.temp
+**/temp/
+.claude/worktrees/
+
+# Anything .local, especially for .env.local
+*.local
+# e.g. Claude Code settings.local.json
+*.local.*
+
+# Audio binaries
+*.pcm
+*.wav
+*.ogg
+*.mp3
+
+# Credentials
+cert*/
+*.pem
+*.crt
+*.cer
+*.key
+*.p12
+
+# Test coverage
+coverage/
+
+# Build
+out/
+bundle/
+.flatpak-builder/
+.flatpak-repo/
+*.flatpak
+# WXT specified this too
+*.output
+.vfox.toml
+
+# Vite
+dist
+# Nuxt
+.nuxt
+# vite-plugin-inspect
+.vite-inspect
+.vite-inspect*
+
+# auto import & auto fs based router
+components.d.ts
+**/typed-router.d.ts
+
+# Cache
+.eslintcache
+**/.cache/
+**/.vitepress/cache/
+**/*.tsbuildinfo
+
+# Netlify
+**/.netlify/*
+**/.netlify/functions-serve/*
+
+**/server/public/*
+**/public/assets/js/*
+**/assets/live2d/models/*
+**/assets/vrm/models/*
+
+# Serving fonts locally
+**/public/assets/fonts/
+
+# Code generation
+**/vscode-airi/src/generated/
+**/vscode-airi/LICENSE
+
+# Make it easy for devenv users to override their local environment.
+# See: https://github.com/moeru-ai/airi/pull/110#discussion_r2024378953
+.direnv
+.pre-commit-config.yaml
+.envrc
+.devenv*
+devenv.*
+
+# Rust
+target/
+crates/*/target/
+
+# turborepo
+.turbo
+
+# WXT
+.wxt
+stats.html
+stats-*.json
+web-ext.config.ts
+
+# Data
+.postgres
+twitter-session.json
+
+# Symlinks created by nix build
+result*
+# Nix develop outputs
+outputs/
+
+# MediaPipe task assets
+packages/model-driver-mediapipe/tasks/assets/*
+
+# Plugins
+plugins/local
+plugins/development
+plugins-local
+plugins-development
+
+apps/stage-pocket/ios/buildServer.json
+apps/stage-pocket/airi-pocket.jks
+apps/stage-tamagotchi/electron.vite.config.*.mjs
+.docs/superpowers
+
+# Tools - ghfs
+.ghfs/
+
+# Tools - Obsidian
+.obsidian/
+
+docs/ai/context/verifications/
+.playwright-mcp/
+
+# Local toolchains and caches
+.corepack/
+.node/
+.npm-cache/
+node-v*-win-*.zip
+
+# Embedded IndexTTS runtime resources
+services/index-tts/.venv*/
+services/index-tts/venv*/
+services/index-tts/conda_env*/
+services/index-tts/checkpoints/*
+!services/index-tts/checkpoints/*.yaml
+services/index-tts/voices/
+services/index-tts/tmp/
+services/index-tts/cache/
+services/index-tts/outputs/
+services/index-tts/**/*.log
+services/index-tts/**/*.wav
+services/index-tts/**/*.mp3
+services/index-tts/**/*.ogg
+services/index-tts/**/*.pcm
+services/index-tts/**/*.t7
+services/index-tts/**/*.pt
+services/index-tts/**/*.pth
+services/index-tts/**/*.safetensors
+services/index-tts/**/*.ckpt
+services/index-tts/assets/*.mp4
+
+# Embedded Alife runtime resources
+services/alife/.dotnet/
+services/alife/Runtime/
+services/alife/Outputs/
+services/alife/Storage/
+services/alife/**/bin/
+services/alife/**/obj/
+services/alife/**/.vs/
+services/alife/**/*.log
+services/alife/**/*.dll
+services/alife/**/*.exe
+services/alife/**/*.pdb
+services/alife/**/*.bin
+services/alife/**/*.onnx
+services/alife/**/*.safetensors
+services/alife/**/*.pt
+services/alife/**/*.pth
+services/alife/**/*.ckpt
+services/alife/**/*.nupkg
+services/alife/**/*.db
+services/alife/**/*.sqlite
+services/alife/**/*.sqlite3
+services/alife/**/__pycache__/
+services/alife/**/.mypy_cache/
+services/alife/**/.ruff_cache/

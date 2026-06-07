@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Sources\Alife.Basic\Alife.Basic.csproj" />
+    <ProjectReference Include="..\..\Sources\Alife.Framework\Alife.Framework.csproj" />
+    <ProjectReference Include="..\..\Sources\Alife.Implement\Alife.Implement.csproj" />
+    <ProjectReference Include="..\..\Sources\Alife.Function\Alife.Function.Vision\Alife.Function.Vision.csproj" />
+    <ProjectReference Include="..\Alife.Demo.Framework\Alife.Demo.Framework.csproj" />
+  </ItemGroup>
+
+</Project>

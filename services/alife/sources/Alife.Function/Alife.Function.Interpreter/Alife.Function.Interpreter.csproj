@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>Alife.Function.Interpreter</AssemblyName>
+    <RootNamespace>Alife.Function.Interpreter</RootNamespace>
+  </PropertyGroup>
+</Project>

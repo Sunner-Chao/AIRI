@@ -1,0 +1,17 @@
+@inject NavigationManager Navigation
+
+<Card Title="@($"与{Context.Character.Name}的活动")">
+    <Extra>
+        <Button Type="@(ButtonType.Link)" OnClick="@(() => Navigation.NavigateTo($"/agent/{Context.Character.Name}"))">进入角色页</Button>
+    </Extra>
+    <ChildContent>
+        <Flex Justify="FlexJustify.Center" Gap="FlexGap.Middle">
+            <Button Type="@ButtonType.Primary" Danger OnClick="Stopped">停止运行</Button>
+        </Flex>
+    </ChildContent>
+</Card>
+
+@code {
+    [Parameter] public ChatActivity Context { get; set; } = null!;
+    [Parameter] public EventCallback Stopped { get; set; }
+}

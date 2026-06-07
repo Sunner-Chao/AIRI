@@ -1,0 +1,276 @@
+@namespace Alife.Implement
+@inherits Alife.Framework.PluginUIBase<SpeechService, SpeechConfig>
+@implements IDisposable
+@using System.IO
+@using Alife.Function.Speech
+@using Alife.Basic
+
+<div style="background: #fafafa; padding: 24px; border-radius: 12px; border: 1px solid #f0f0f0;">
+    <Flex Direction="FlexDirection.Vertical" Gap="@("24")">
+
+        <GridRow Gutter="16">
+            <GridCol Span="12">
+                <Card Size="CardSize.Small" Title="语音识别 (STT)" Style="border-radius: 8px;">
+                    <Flex Direction="FlexDirection.Vertical" Align="@FlexAlign.Center" Style="padding: 12px 0;">
+                        <div style="margin-bottom: 16px;">
+                            @if (SpeechService.IsRecognizing)
+                            {
+                                <Badge Status="BadgeStatus.Processing" Text="正在监听中..."/>
+                            }
+                            else
+                            {
+                                <Badge Status="BadgeStatus.Default" Text="未启用"/>
+                            }
+                        </div>
+                        <Button Type="@ButtonType.Default" Size="@ButtonSize.Small" OnClick="ResetRecognizer"
+                                Loading="@isRestarting">重置识别
+                        </Button>
+                        <Text Type="TextElementType.Secondary" Style="font-size: 11px; margin-top: 8px;">
+                            重启语音识别服务，适用于麦克风监听卡死或异常时重新初始化。
+                        </Text>
+                    </Flex>
+                </Card>
+            </GridCol>
+
+            @if (Plugin != null)
+            {
+                <GridCol Span="12">
+                    <Card Size="CardSize.Small" Title="语音合成 (TTS)" Style="border-radius: 8px;">
+                        <Flex Direction="FlexDirection.Vertical" Align="@FlexAlign.Center" Style="padding: 12px 0;">
+                            <div style="margin-bottom: 16px;">
+                                @if (Plugin.IsSynthesizing)
+                                {
+                                    <Badge Status="BadgeStatus.Processing" Color="@("green")" Text="正在播放语音..."/>
+                                }
+                                else
+                                {
+                                    <Badge Status="BadgeStatus.Default" Text="待机"/>
+                                }
+                            </div>
+                        </Flex>
+                    </Card>
+                </GridCol>
+            }
+        </GridRow>
+
+        <Form TModel="SpeechConfig" Model="@Configuration" Layout="@FormLayout.Vertical">
+            <FormItem Label="语音合成引擎">
+                <RadioGroup @bind-Value="@Configuration.SynthesizerType" TValue="SpeechSynthesizerType">
+                    <Radio Value="@SpeechSynthesizerType.Edge">Edge-TTS (在线)</Radio>
+                    <Radio Value="@SpeechSynthesizerType.Vits">VITS (本地离线)</Radio>
+                    <Radio Value="@SpeechSynthesizerType.Genie">Genie-TTS (本地离线)</Radio>
+                </RadioGroup>
+                <div style="margin-top: 8px;">
+                    <Alert Type="AlertType.Warning" ShowIcon="true"
+                           Message="注意：合成引擎类型仅在角色激活时创建一次，运行中修改此项需重启角色生效。"/>
+                </div>
+            </FormItem>
+
+            @if (Configuration.SynthesizerType == SpeechSynthesizerType.Edge)
+            {
+                <FormItem Label="Edge 语音音色">
+                    <Input @bind-Value="@Configuration.EdgeVoiceTone"/>
+                    <Text Type="TextElementType.Secondary" Style="font-size: 11px;">在线 Edge-TTS 的发音角色音色，例如
+                        zh-CN-XiaoyiNeural。
+                    </Text>
+                </FormItem>
+            }
+            else if (Configuration.SynthesizerType == SpeechSynthesizerType.Vits)
+            {
+                <FormItem>
+                    <Alert Type="AlertType.Info" ShowIcon="true"
+                           Message="VITS 离线合成需要 Runtime/VITS/ 目录下存在本地 VITS 模型文件（如 G_953000.onnx、tokens.txt 等）。如果该文件夹内文件缺失，本地语音合成服务将无法启动。"/>
+                </FormItem>
+                <FormItem Label="VITS 说话人 ID">
+                    <GridRow Gutter="8" Style="width: 100%; display: flex; align-items: center;">
+                        <GridCol Span="16">
+                            <AntDesign.InputNumber @bind-Value="@Configuration.VitsSpeakerId" Min="0" Max="803"
+                                                   Style="width: 100%;"/>
+                        </GridCol>
+                        <GridCol Span="8">
+                            <Button Type="@ButtonType.Default" OnClick="@(() => isModalVisible = true)" Style="width: 100%;">
+                                选择角色
+                            </Button>
+                        </GridCol>
+                    </GridRow>
+                    <Text Type="TextElementType.Secondary" Style="font-size: 11px;">本地 VITS 模型的说话人 ID（0 到
+                        803）。默认为 284（希儿）。
+                    </Text>
+                </FormItem>
+                <FormItem Label="VITS 声音长度 (Length Scale)">
+                    <AntDesign.InputNumber @bind-Value="@Configuration.VitsLengthScale" Min="0.1f" Max="5.0f"
+                                           Step="0.01f" Style="width: 100%;"/>
+                    <Text Type="TextElementType.Secondary" Style="font-size: 11px;">控制整体声音长度，值越大说话越慢（声音越长）。
+                    </Text>
+                </FormItem>
+                <FormItem Label="VITS 感情变化程度 (Noise Scale)">
+                    <AntDesign.InputNumber @bind-Value="@Configuration.VitsNoiseScale" Min="0.01f" Max="2.0f"
+                                           Step="0.01f" Style="width: 100%;"/>
+                    <Text Type="TextElementType.Secondary" Style="font-size: 11px;">控制发音的感情起伏变化程度。
+                    </Text>
+                </FormItem>
+                <FormItem Label="VITS 音素发音长度 (Noise Scale W)">
+                    <AntDesign.InputNumber @bind-Value="@Configuration.VitsNoiseScaleW" Min="0.01f" Max="2.0f"
+                                           Step="0.01f" Style="width: 100%;"/>
+                    <Text Type="TextElementType.Secondary" Style="font-size: 11px;">控制单个音素的长度起伏。
+                    </Text>
+                </FormItem>
+            }
+            else if (Configuration.SynthesizerType == SpeechSynthesizerType.Genie)
+            {
+                <FormItem>
+                    <Alert Type="AlertType.Info" ShowIcon="true"
+                           Message="Genie-TTS 引擎会直接使用 Runtime/Genie/ 目录下的自定义克隆声音模型（自动提取文件夹中的 ONNX 及参考音频）。该引擎不需要配置说话人 ID，会为您生成高度拟真、流畅的个性化声音。"/>
+                </FormItem>
+            }
+        </Form>
+
+        @if (Plugin != null)
+        {
+            <Flex Align="@FlexAlign.Center" Justify="FlexJustify.SpaceBetween" Style="margin-bottom: 8px;">
+                <Title Level="4" Style="margin: 0;">特定于角色的开关</Title>
+                <Flex Align="@FlexAlign.Center" Gap="@("8")">
+                    <Text Type="TextElementType.Secondary">是否接收语音</Text>
+                    <Switch @bind-Checked="@Plugin.IsReceiving" Size="InputSize.Small"/>
+                </Flex>
+            </Flex>
+        }
+
+        <Modal Title="VITS 说话人角色 ID 映射表"
+               Visible="@isModalVisible"
+               OnOk="@(() => isModalVisible = false)"
+               OnCancel="@(() => isModalVisible = false)"
+               Width="600"
+               Footer="null"
+               DestroyOnClose="true">
+            <Input Placeholder="输入角色姓名或 ID 搜索..." @bind-Value="@searchQuery" Style="margin-bottom: 16px;" />
+            <div style="max-height: 400px; overflow-y: auto; border: 1px solid #f0f0f0; border-radius: 4px; padding: 8px; background: #fff;">
+                @foreach (var speaker in filteredSpeakers)
+                {
+                    <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 8px 12px; border-bottom: 1px solid #f0f0f0;">
+                        <div>
+                            <Tag Color="TagColor.Blue">ID: @speaker.Id</Tag>
+                            <span style="font-weight: 500; font-size: 14px; margin-left: 8px;">@speaker.Name</span>
+                        </div>
+                        <Button Type="@ButtonType.Link" Size="@ButtonSize.Small" OnClick="@(() => SelectSpeaker(speaker.Id))">
+                            选择该角色
+                        </Button>
+                    </div>
+                }
+            </div>
+        </Modal>
+
+    </Flex>
+
+</div>
+
+@code {
+    System.Timers.Timer? refreshTimer;
+    bool isRestarting;
+    bool isModalVisible;
+    
+    private string _searchQuery = "";
+    string searchQuery
+    {
+        get => _searchQuery;
+        set
+        {
+            if (_searchQuery != value)
+            {
+                _searchQuery = value;
+                FilterSpeakers(value);
+            }
+        }
+    }
+
+    List<(int Id, string Name)> speakers = new();
+    List<(int Id, string Name)> filteredSpeakers = new();
+
+    protected override void OnInitialized()
+    {
+        refreshTimer = new System.Timers.Timer(1000);
+        refreshTimer.Elapsed += (_, _) => InvokeAsync(StateHasChanged);
+        refreshTimer.Start();
+
+        LoadSpeakers();
+    }
+
+    void LoadSpeakers()
+    {
+        try
+        {
+            string listPath = Path.Combine(AlifePath.RuntimeFolderPath, "VITS", "speakers_list.txt");
+            if (File.Exists(listPath))
+            {
+                var lines = File.ReadAllLines(listPath);
+                var temp = new List<(int Id, string Name)>();
+                foreach (var line in lines)
+                {
+                    if (string.IsNullOrWhiteSpace(line)) continue;
+                    var parts = line.Split(':', 2);
+                    if (parts.Length == 2 && int.TryParse(parts[0].Trim(), out int id))
+                    {
+                        temp.Add((id, parts[1].Trim()));
+                    }
+                }
+                speakers = temp;
+            }
+        }
+        catch
+        {
+            // ignored
+        }
+        filteredSpeakers = speakers;
+    }
+
+    void FilterSpeakers(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            filteredSpeakers = speakers;
+        }
+        else
+        {
+            filteredSpeakers = speakers
+                .Where(s => s.Id.ToString().Contains(value) || s.Name.Contains(value, System.StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        }
+    }
+
+    void SelectSpeaker(int id)
+    {
+        if (Configuration != null)
+        {
+            Configuration.VitsSpeakerId = id;
+        }
+        isModalVisible = false;
+    }
+
+    async Task ResetRecognizer()
+    {
+        if (SpeechService.Recognizer == null)
+            return;
+
+        isRestarting = true;
+        try
+        {
+            SpeechService.Recognizer.Stop();
+            await SpeechService.Recognizer.TryStartAsync();
+        }
+        catch
+        {
+            // ignored
+        }
+        finally
+        {
+            isRestarting = false;
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    public void Dispose()
+    {
+        refreshTimer?.Stop();
+        refreshTimer?.Dispose();
+    }
+}

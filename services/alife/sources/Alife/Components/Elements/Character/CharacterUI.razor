@@ -1,0 +1,19 @@
+@inject NavigationManager Navigation
+@inject CharacterSystem CharacterSystem
+
+<Card Title="@(Source.Name)">
+    <Extra>
+        <Button Type="@(ButtonType.Link)" OnClick="@(() => Navigation.NavigateTo($"/agent/{Source.Name}"))">进入角色页</Button>
+    </Extra>
+    <ChildContent>
+        <Flex Style="justify-content: space-between;align-items: center">
+            <Checkbox Checked="@Source.AutoActivate" CheckedChanged="@((bool v) => { Source.AutoActivate = v; CharacterSystem.SaveCharacter(Source); })">开机自启</Checkbox>
+            <Button Danger OnClick="@(OnDelete)">删除</Button>
+        </Flex>
+    </ChildContent>
+</Card>
+
+@code {
+    [Parameter] public Character Source { get; set; } = null!;
+    [Parameter] public EventCallback OnDelete { get; set; }
+}

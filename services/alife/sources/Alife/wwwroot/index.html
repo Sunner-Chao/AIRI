@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Alife</title>
+    <base href="/" />
+    
+    <!-- AntDesign Styles -->
+    <link href="_content/AntDesign/css/ant-design-blazor.css" rel="stylesheet" />
+    <script src="_content/AntDesign/js/ant-design-blazor.js"></script>
+    
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="app.css" />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    
+    <style>
+        /* Modern Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #d9d9d9;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #bfbfbf;
+        }
+
+        #blazor-error-ui {
+            background: #fff1f0;
+            color: #cf1322;
+            bottom: 0;
+            box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.15);
+            display: none; /* Hide by default */
+            left: 0;
+            padding: 12px 24px;
+            position: fixed;
+            width: 100%;
+            z-index: 9999;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        #blazor-error-ui .dismiss {
+            cursor: pointer;
+            position: absolute;
+            right: 24px;
+            top: 14px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">正在加载桌面环境...</div>
+
+    <div id="blazor-error-ui">
+        发生错误喵。
+        <a href="" class="reload">刷新</a>
+        <a class="dismiss">🗙</a>
+    </div>
+
+    <!-- Hybrid Specific Script -->
+    <script src="_framework/blazor.webview.js"></script>
+    <script src="js/tutorial.js"></script>
+</body>
+</html>

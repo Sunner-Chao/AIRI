@@ -1,0 +1,44 @@
+@page "/welcome"
+@using Alife.Components.Elements.Character
+@inject CharacterSystem CharacterSystem
+@inject ChatActivitySystem ChatActivitySystem
+@inject NavigationManager Navigation
+
+@if (characterHomeUI == null || characterHomeUI.IsLoading == false)
+{
+    <WelcomeUI/>
+}
+
+<CharacterHomeUI @key="character?.Name" @ref="characterHomeUI" Character="character" Visibility="false"
+                 StateChanged="@(StateHasChanged)"></CharacterHomeUI>
+
+@code {
+    Character? character;
+    CharacterHomeUI? characterHomeUI;
+    static bool hasBootstrapped;
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (hasBootstrapped) return;
+        hasBootstrapped = true;
+
+        Task.Run(async () => {
+            List<Character> startingCharacters = CharacterSystem.GetAllCharacters()
+                .Where(c => c.AutoActivate && !ChatActivitySystem.IsActivated(c))
+                .ToList();
+            foreach (Character startingCharacter in startingCharacters)
+            {
+                character = startingCharacter;
+                await InvokeAsync(StateHasChanged);
+                await Task.Delay(100); // 给一点时间让 @key 触发组件重建并更新 ref
+                
+                if (characterHomeUI != null)
+                    await characterHomeUI.StartActivity();
+            }
+
+            if (CharacterSystem.GetAllCharacters().Count != 0)
+                Navigation.NavigateTo("/system", replace: true);
+        });
+    }
+
+}

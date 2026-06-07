@@ -1,0 +1,105 @@
+@using Microsoft.SemanticKernel
+
+<div style="padding: 24px; height: 100%; overflow-y: auto;">
+    <Flex Justify="FlexJustify.SpaceBetween" Align="FlexAlign.Center" Style="margin-bottom: 24px;">
+        <Title Level="4" Style="margin: 0;">完整上下文信息检查</Title>
+        <Space>
+            <SpaceItem>
+                <RadioGroup @bind-Value="historyRoleFilter">
+                    <Radio RadioButton Value="@("All")">全部</Radio>
+                    <Radio RadioButton Value="@("Chat")">对话</Radio>
+                    <Radio RadioButton Value="@("System")">提示</Radio>
+                    <Radio RadioButton Value="@("Memory")">记忆</Radio>
+                </RadioGroup>
+            </SpaceItem>
+        </Space>
+    </Flex>
+
+    @if (Activity != null)
+    {
+        <AntList DataSource="@(GetFilteredHistory())" TItem="ChatMessageContent">
+            <ListItem>
+                <ChildContent>
+                    <div style="display: flex; flex-direction: column; gap: 8px; width: 100%;">
+                        <div
+                            style="font-size: 13px; color: rgba(0,0,0,0.45); font-weight: 500; display: flex; align-items: center; justify-content: space-between;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <Tag Color="@(GetRoleColor(context.Role.ToString()))"
+                                     Style="margin: 0;">@context.Role</Tag>
+                                @if (!string.IsNullOrWhiteSpace(context.AuthorName))
+                                {
+                                    <span>@@@context.AuthorName</span>
+                                }
+                            </div>
+                            <Button Type="@ButtonType.Text" Danger Icon="@IconType.Outline.Delete"
+                                    Size="@ButtonSize.Small"
+                                    Disabled="@(Activity?.ChatBot.IsChatting ?? false)"
+                                    OnClick="@(() => DeleteMessage(context))"/>
+                        </div>
+                        <Paragraph
+                            Style="@($"margin: 0; white-space: pre-wrap; padding: 12px; border-radius: 4px; border: 1px solid #f0f0f0; {(IsKeyMemory(context) ? "background: #fffbe6; border-color: #ffe58f;" : "background: #f9f9f9;")}")">
+                            @if (IsKeyMemory(context))
+                            {
+                                <Flex Justify="FlexJustify.SpaceBetween" Align="FlexAlign.Center"
+                                      Style="margin-bottom: 8px;">
+                                    <Tag Color="@("gold")" Style="margin: 0;">记忆存档</Tag>
+                                </Flex>
+                            }
+                            @context.Content
+                        </Paragraph>
+                    </div>
+                </ChildContent>
+            </ListItem>
+        </AntList>
+    }
+    else
+    {
+        <Empty Description="@("启动角色后即可查看当前的对话历史记录喵！")"/>
+    }
+</div>
+
+@code {
+    [Parameter] public ChatActivity? Activity { get; set; }
+
+    string historyRoleFilter = "All";
+
+    IEnumerable<ChatMessageContent> GetFilteredHistory()
+    {
+        if (Activity == null) return [];
+        var history = Activity.ChatBot.ChatHistory.AsEnumerable();
+
+        return historyRoleFilter switch {
+            "Chat" => history.Where(c => !IsKeyMemory(c) && (c.Role.ToString().Equals("user", StringComparison.OrdinalIgnoreCase) || c.Role.ToString().Equals("assistant", StringComparison.OrdinalIgnoreCase))),
+            "System" => history.Where(c => c.Role.ToString().Equals("system", StringComparison.OrdinalIgnoreCase)),
+            "Memory" => history.Where(IsKeyMemory),
+            _ => history
+        };
+    }
+
+
+    string GetRoleColor(string role)
+    {
+        return role.ToLower() switch {
+            "user" => "blue",
+            "assistant" => "green",
+            "system" => "orange",
+            "tool" => "purple",
+            _ => "default"
+        };
+    }
+
+
+    void DeleteMessage(ChatMessageContent content)
+    {
+        if (Activity == null || Activity.ChatBot.IsChatting) return;
+        Activity.ChatBot.ChatHistory.Remove(content);
+        StateHasChanged();
+    }
+
+
+    bool IsKeyMemory(ChatMessageContent content)
+    {
+        if (string.IsNullOrEmpty(content.Content)) return false;
+        return content.Content.StartsWith("[记忆存档");
+    }
+}

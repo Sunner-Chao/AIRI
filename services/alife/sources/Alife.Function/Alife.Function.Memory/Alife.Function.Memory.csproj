@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <AssemblyName>Alife.Function.Memory</AssemblyName>
+        <RootNamespace>Alife.Function.Memory</RootNamespace>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.SemanticKernel" Version="1.73.0" />
+        <PackageReference Include="Microsoft.SemanticKernel.Connectors.Onnx" Version="1.74.0-alpha" />
+        <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+        <PackageReference Include="DuckDB.NET.Data.Full" Version="1.5.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\..\Alife.Basic\Alife.Basic.csproj" />
+    </ItemGroup>
+
+</Project>

@@ -1,0 +1,179 @@
+@page "/system"
+@using Alife.Components.Elements.Character
+@using Alife.Components.Elements.Plugin
+@inject NavigationManager Navigation
+@inject CharacterSystem CharacterSystem
+@inject ChatActivitySystem ChatActivitySystem
+@inject ConfirmService ConfirmService
+@inject INotificationService NotificationService
+@inject ConfigurationSystem ConfigurationSystem
+@implements IDisposable
+
+<div
+    style="height: calc(100vh - 24px); margin: 12px; overflow: hidden; display: flex; flex-direction: column; background: #fff; border-radius: 8px; border: 1px solid #f0f0f0; animation: fadeIn 0.5s ease-out;">
+    <div
+        style="padding: 16px; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center;">
+        <Title Level="3" Style="margin: 0;">系统管理中心</Title>
+    </div>
+
+    <div style="flex: 1; overflow: hidden;">
+        <Tabs DefaultActiveKey="1" TabPosition="@TabPosition.Left" Style="height: 100%;">
+            <TabPane Key="1">
+                <TabTemplate>
+                    <Flex Direction="@FlexDirection.Vertical" Align="@FlexAlign.Center" Gap="@("4")">
+                        <Icon Type="@IconType.Outline.Home"/>
+                        <span style="font-size: 12px">系统概览</span>
+                    </Flex>
+                </TabTemplate>
+                <ChildContent>
+                    <div style="padding: 24px; height: 100%; overflow-y: auto; background: #fafafa;">
+                        <div
+                            style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;">
+                            <!-- 创建新角色 -->
+                            <div @onclick="@(() => { isCreating = true; })" style="cursor: pointer;">
+                                <Card id="btn-new-character" Title="创建新角色" Class="character-card-new" Hoverable>
+                                    <Flex Direction="@FlexDirection.Vertical" Align="@FlexAlign.Center"
+                                          Justify="@FlexJustify.Center" Style="height: 120px; color: rgba(0,0,0,0.45)">
+                                        <Icon Type="@IconType.Outline.Plus" Style="font-size: 32px"/>
+                                        <span style="margin-top: 8px">点此添加角色</span>
+                                    </Flex>
+                                </Card>
+                            </div>
+
+                            @foreach (Character character in CharacterSystem.GetAllCharacters())
+                            {
+                                <CharacterUI Source="character" OnDelete="@(() => ConfirmDelete(character))"/>
+                            }
+                        </div>
+                    </div>
+                </ChildContent>
+            </TabPane>
+
+            <TabPane Key="2">
+                <TabTemplate>
+                    <div id="tab-plugin-center">
+                        <Flex Direction="@FlexDirection.Vertical" Align="@FlexAlign.Center" Gap="@("4")">
+                            <Icon Type="@IconType.Outline.AppstoreAdd"/>
+                            <span style="font-size: 12px">插件中心</span>
+                        </Flex>
+                    </div>
+                </TabTemplate>
+                <ChildContent>
+                    <div style="height: 100%; overflow: hidden; display: flex; flex-direction: column; background: #fafafa;">
+                        <PluginManagementView IsReadOnly="false"></PluginManagementView>
+                    </div>
+                </ChildContent>
+            </TabPane>
+
+            <TabPane Key="3">
+                <TabTemplate>
+                    <Flex Direction="@FlexDirection.Vertical" Align="@FlexAlign.Center" Gap="@("4")">
+                        <Icon Type="@IconType.Outline.Notification"/>
+                        <span style="font-size: 12px">活动监测</span>
+                    </Flex>
+                </TabTemplate>
+                <ChildContent>
+                    <div style="padding: 24px; height: 100%; overflow-y: auto; background: #fafafa;">
+                        <Title Level="4">活跃活动</Title>
+                        <div
+                            style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">
+                            @foreach (ChatActivity chatActivity in ChatActivitySystem.GetAllChatActivities())
+                            {
+                                <ChatActivityUI Context="chatActivity"
+                                                Stopped="@(() => ChatActivitySystem.Stop(chatActivity.Character))"></ChatActivityUI>
+                            }
+                        </div>
+                    </div>
+                </ChildContent>
+            </TabPane>
+
+
+        </Tabs>
+    </div>
+</div>
+
+<Modal Title="创建新角色"
+       Visible="@isCreating"
+       OnOk="@OnConfirmCreate"
+       OnCancel="@(() => isCreating = false)">
+    <AntDesign.Text>请输入角色名称：</AntDesign.Text>
+    <Input @bind-Value="@newCharacterName" Placeholder="如：真央"/>
+    <AntDesign.Text Type="@TextElementType.Secondary" Style="font-size: 12px; margin-top: 8px; display: block;">
+        注意：非法字符将被自动替换，建议使用中文或英文。
+    </AntDesign.Text>
+</Modal>
+
+<style>
+
+    .character-card-new {
+        border: 2px dashed #f0f0f0 !important;
+        background: transparent !important;
+    }
+
+    .character-card-new:hover {
+        border-color: #1890ff !important;
+        background: rgba(24, 144, 255, 0.05) !important;
+    }
+
+    /* 修复 AntDesign Tabs 在 Left 模式下的高度塌陷问题 */
+    .ant-tabs-content-holder {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    .ant-tabs-content {
+        height: 100%;
+    }
+
+    .ant-tabs-tabpane {
+        height: 100%;
+        overflow: hidden;
+    }
+</style>
+
+@code {
+    bool isCreating;
+    string newCharacterName = "";
+
+    protected override void OnInitialized()
+    {
+        CharacterSystem.OnChanged += StateHasChanged;
+    }
+
+    void OnConfirmCreate()
+    {
+        if (string.IsNullOrWhiteSpace(newCharacterName)) return;
+        CharacterSystem.CreateCharacter(newCharacterName);
+        isCreating = false;
+
+        Navigation.NavigateTo($"/agent/{newCharacterName}");
+
+        newCharacterName = "";
+    }
+
+    async Task ConfirmDelete(Character character)
+    {
+        ConfirmResult confirmResult = await ConfirmService.Show(
+            $"确认要删除角色 [{character.Name}] 吗？",
+            "警告",
+            ConfirmButtons.YesNo,
+            ConfirmIcon.Warning);
+
+        if (confirmResult == ConfirmResult.Yes)
+        {
+            if (ChatActivitySystem.IsActivated(character))
+                await ChatActivitySystem.Stop(character);
+            CharacterSystem.DeleteCharacter(character);
+            _ = NotificationService.Success(new NotificationConfig { Message = $"角色 [{character.Name}] 已删除喵。" });
+        }
+    }
+
+
+
+    public void Dispose()
+    {
+        CharacterSystem.OnChanged -= StateHasChanged;
+    }
+}

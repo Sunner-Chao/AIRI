@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>Alife.Function.Browser</AssemblyName>
+    <RootNamespace>Alife.Function.Browser</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Alife.Basic\Alife.Basic.csproj" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="*" />
+  </ItemGroup>
+</Project>

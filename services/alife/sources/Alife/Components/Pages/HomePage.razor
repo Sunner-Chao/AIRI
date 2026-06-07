@@ -1,0 +1,10 @@
+@page "/"
+@inject NavigationManager Navigation
+
+@code {
+    protected override void OnInitialized()
+    {
+        // 始终先跳转到引导/自启页面
+        Navigation.NavigateTo("/welcome", replace: true);
+    }
+}

@@ -1,0 +1,123 @@
+@namespace Alife.Implement
+@inherits Alife.Framework.PluginUIBase<Alife.Implement.MemoryService, Alife.Implement.MemoryConfig>
+
+<div style="background: #fff; padding: 20px; border-radius: 8px;">
+    <Flex Justify="FlexJustify.SpaceBetween" Align="FlexAlign.Center" Style="margin-bottom: 24px;">
+        <Title Level="4" Style="margin: 0;">分层记忆系统配置</Title>
+    </Flex>
+
+    <Form TModel="MemoryConfig" Model="@Configuration" Layout="@FormLayout.Vertical">
+        <GridRow Gutter="16">
+            <GridCol Span="12">
+                <FormItem Label="压缩阈值 (Threshold)">
+                    <AntDesign.InputNumber @bind-Value="@Configuration.Threshold" Min="1" Style="width: 100%;"/>
+                    <Text Type="TextElementType.Secondary" Style="font-size: 11px;">当消息达到此数量时触发压缩</Text>
+                </FormItem>
+            </GridCol>
+            <GridCol Span="12">
+                <FormItem Label="批处理大小 (BatchSize)">
+                    <AntDesign.InputNumber @bind-Value="@Configuration.BatchSize" Min="1" Style="width: 100%;"/>
+                    <Text Type="TextElementType.Secondary" Style="font-size: 11px;">每次压缩的消息条数</Text>
+                </FormItem>
+            </GridCol>
+        </GridRow>
+
+        <GridRow Gutter="16">
+            <GridCol Span="12">
+                <FormItem Label="压缩触发率 (Probability)">
+                    <AntDesign.InputNumber @bind-Value="@Configuration.Probability" Min="0f" Max="1f" Step="0.1f"
+                                           Style="width: 100%;"/>
+                    <Text Type="TextElementType.Secondary" Style="font-size: 11px;">
+                        扰动压缩时机，避免连续压缩过于影响互动感
+                    </Text>
+                </FormItem>
+            </GridCol>
+            <GridCol Span="12">
+                <FormItem Label="最大压缩层级 (MaxLevel)">
+                    <AntDesign.InputNumber @bind-Value="@Configuration.MaxCompressionLevel" Min="0"
+                                           Style="width: 100%;"/>
+                    <Text Type="TextElementType.Secondary" Style="font-size: 11px;">
+                        达到此层级的记忆将不再压缩，变为常驻上下文
+                    </Text>
+                </FormItem>
+            </GridCol>
+        </GridRow>
+    </Form>
+
+    @if (Plugin != null)
+    {
+        <Divider>核心记忆管理 (知识库)</Divider>
+        <Card Size="CardSize.Small" Style="background: #fafafa; border-radius: 8px; border: 1px dashed #d9d9d9;">
+            <Flex Direction="FlexDirection.Vertical" Gap="@("12")">
+                <div style="padding: 12px;">
+                    <Text Strong>手动插入核心记忆</Text>
+                    <br/>
+                    <Text Type="TextElementType.Secondary" Style="font-size: 12px;">
+                        这些内容将以最高层级插入，作为常驻上下文永久保留。
+                    </Text>
+                </div>
+
+                <Form Model="@newArchiveModel" Layout="@FormLayout.Vertical" Style="padding: 0 12px 12px 12px;">
+                    <FormItem Label="事件概述 (Summary)">
+                        <Input @bind-Value="@newArchiveModel.Summary" Placeholder="简短描述该记忆（用于搜索和概览）"/>
+                    </FormItem>
+                    <FormItem Label="详细内容 (Content)">
+                        <TextArea @bind-Value="@newArchiveModel.Content" Rows="4"
+                                  Placeholder="记录详细的事实、知识或对话细节..."/>
+                    </FormItem>
+                    <Button Type="@ButtonType.Primary" Ghost Icon="@IconType.Outline.Plus" Block
+                            OnClick="@HandleAddArchive" Loading="@isProcessing">
+                        立即存入核心记忆
+                    </Button>
+                </Form>
+            </Flex>
+        </Card>
+
+        <div style="margin-top: 24px;">
+            <Text Strong>管理提示：</Text>
+            <Text Type="TextElementType.Secondary" Style="font-size: 12px; display: block; margin-top: 8px;">
+                若要删除已存在的记忆，请前往"完整背景"页面，点击对应"记忆存档"条目旁边的删除图标喵。
+            </Text>
+        </div>
+    }
+</div>
+
+@code {
+    [Inject] IMessageService MessageService { get; set; } = null!;
+
+    ArchiveModel newArchiveModel = new();
+    bool isProcessing;
+
+    class ArchiveModel
+    {
+        public string Summary { get; set; } = "";
+        public string Content { get; set; } = "";
+    }
+
+    async Task HandleAddArchive()
+    {
+        if (Plugin == null) return;
+        if (string.IsNullOrWhiteSpace(newArchiveModel.Summary) || string.IsNullOrWhiteSpace(newArchiveModel.Content))
+        {
+            MessageService.Warning("概述和内容都不能为空喵！");
+            return;
+        }
+
+        isProcessing = true;
+        try
+        {
+            int maxLevel = Configuration.MaxCompressionLevel;
+            await Plugin.InsertMemory(maxLevel, newArchiveModel.Summary, newArchiveModel.Content, DateTime.Now, DateTime.Now);
+            MessageService.Success("核心记忆已成功存入喵！");
+            newArchiveModel = new ArchiveModel();
+        }
+        catch (Exception ex)
+        {
+            MessageService.Error($"存入失败: {ex.Message}");
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+}
